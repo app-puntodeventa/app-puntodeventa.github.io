@@ -7,10 +7,13 @@
 <title>POS Tienda</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
 </head>
 
 <body class="bg-gray-100 min-h-screen flex flex-col">
@@ -20,7 +23,8 @@
   <div class="bg-white p-6 rounded-xl w-72 text-center">
     <h2 class="font-bold mb-3">Acceso</h2>
 
-    <input id="pinInput" type="password"
+    <input id="pinInput"
+      type="password"
       class="border p-2 w-full text-center"
       placeholder="PIN">
 
@@ -44,6 +48,7 @@
 
 <!-- FOOTER -->
 <div class="p-4 bg-white shadow-inner flex justify-between items-center">
+
   <div>
     <p class="text-sm text-gray-500">Total del día</p>
     <p id="totalDia" class="text-xl font-bold text-blue-600">$0</p>
@@ -53,6 +58,7 @@
     class="bg-black text-white px-4 py-2 rounded">
     📄 PDF
   </button>
+
 </div>
 
 <!-- MODAL -->
@@ -63,15 +69,16 @@
   <h2 class="font-bold mb-2">Venta</h2>
 
   <div class="flex gap-2">
+
     <input id="inputProducto"
       class="border p-2 w-full"
       placeholder="Ej: 2 cuadernos 25 | 3 tapas 5 c/u">
 
-    <!-- ➕ móvil -->
     <button id="btnAdd"
       class="bg-green-500 text-white px-3 rounded md:hidden">
       ➤
     </button>
+
   </div>
 
   <p id="preview" class="text-blue-500 text-sm mt-1"></p>
