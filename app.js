@@ -243,7 +243,8 @@ function renderVenta(v) {
   `;
 
   // 📲 WHATSAPP → IMAGEN REAL
-  div.querySelector(".bg-green-500").onclick = () => {
+  // 📄 TICKET (DESCARGA IMAGEN)
+  div.querySelector(".bg-blue-500").onclick = () => {
 
     html2canvas(div).then(canvas => {
 
@@ -251,13 +252,8 @@ function renderVenta(v) {
 
       const link = document.createElement("a");
       link.href = img;
-      link.download = "ticket.png";
+      link.download = `ticket-${v.usuario}-${Date.now()}.png`;
       link.click();
-
-      window.open(
-        `https://wa.me/?text=${encodeURIComponent("Venta total: $" + v.total)}`,
-        "_blank"
-      );
     });
   };
 
