@@ -355,6 +355,9 @@ function renderHistorial() {
   const ventas = data[usuarioActual]?.ventas || [];
 
   ventas.forEach(renderVenta);
+
+actualizarTotalDia();
+  
 }
 
 
