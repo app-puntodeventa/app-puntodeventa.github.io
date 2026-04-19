@@ -98,14 +98,18 @@
     <p id="totalDia" class="text-xl font-bold text-blue-600">$0</p>
   </div>
 
-  <button id="btnPDF"
-    class="bg-black text-white px-4 py-2 rounded">
-    📄 PDF
+<div class="flex gap-2">
+  <!-- PDF normal -->
+  <button id="btnPDF" class="bg-black text-white px-4 py-2 rounded text-sm">
+    📄 PDF DEL DÍA
   </button>
 
-  <button id="btnPDFGlobal" style="display:none;">
-  📊 PDF GLOBAL (ADMIN)
-</button>
+  <!-- PDF admin -->
+  <button id="btnPDFGlobal" style="display:none;"
+    class="bg-red-600 text-white px-4 py-2 rounded text-sm font-bold shadow-lg">
+    📊 PDF GLOBAL
+  </button>
+</div>
 
 </div>
 
