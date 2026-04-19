@@ -1,102 +1,369 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>POS Tienda PRO</title>
+// ==============================
+// 🔥 ESTADO GLOBAL
+// ==============================
 
-<!-- UI -->
-<script src="https://cdn.tailwindcss.com"></script>
+let usuarioActual = null;
+let ventaActual = [];
+let totalVenta = 0;
 
-<!-- PDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+let data = JSON.parse(localStorage.getItem("dataPOS")) || {};
 
-<!-- imagen ticket -->
-<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
-<!-- iconos whatsapp -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+// ==============================
+// 🔐 PINES FIJOS (SEGURIDAD BÁSICA)
+// ==============================
 
-</head>
+const VALID_PINS = {
+  "4829": "ADMIN",
+  "7391": "TURNO 1",
+  "6158": "TURNO 2"
+};
 
-<body class="bg-gray-100 min-h-screen flex flex-col">
 
-<!-- ================= LOGIN ================= -->
-<div id="loginScreen" class="fixed inset-0 bg-black flex items-center justify-center z-50">
+// ==============================
+// 🎯 DOM
+// ==============================
 
-  <div class="bg-white p-6 rounded-xl w-72 text-center">
+const modal = document.getElementById("modal");
+const input = document.getElementById("inputProducto");
+const preview = document.getElementById("preview");
 
-    <h2 class="font-bold mb-3">Acceso</h2>
+const totalVentaSpan = document.getElementById("totalVenta");
+const totalDiaSpan = document.getElementById("totalDia");
 
-    <input id="pinInput"
-      type="password"
-      maxlength="6"
-      class="border p-2 w-full text-center text-xl"
-      placeholder="PIN"
-    >
+const listaVentas = document.getElementById("listaVentas");
 
-    <button id="btnLogin"
-      class="bg-blue-600 text-white w-full mt-3 py-2 rounded">
-      Entrar
+
+// ==============================
+// 🔐 LOGIN REAL
+// ==============================
+
+document.getElementById("btnLogin").onclick = () => {
+
+  const pin = document.getElementById("pinInput").value;
+
+  if (!VALID_PINS[pin]) {
+    alert("PIN incorrecto");
+    return;
+  }
+
+  usuarioActual = pin;
+
+  if (!data[pin]) {
+    data[pin] = {
+      nombre: VALID_PINS[pin],
+      ventas: []
+    };
+  }
+
+  localStorage.setItem("usuarioActivo", pin);
+
+  document.getElementById("loginScreen").style.display = "none";
+
+  init();
+};
+
+
+// ==============================
+// 🚀 INIT (BLOQUEA SIN LOGIN)
+// ==============================
+
+function init() {
+
+  const pin = localStorage.getItem("usuarioActivo");
+
+  if (!pin || !VALID_PINS[pin]) {
+    document.getElementById("loginScreen").style.display = "flex";
+    return;
+  }
+
+  usuarioActual = pin;
+
+  renderHistorial();
+  actualizarTotalDia();
+}
+
+init();
+
+
+// ==============================
+// 🧠 PARSER
+// ==============================
+
+function parsear(texto) {
+
+  const nums = texto.match(/\d+(\.\d+)?/g)?.map(Number) || [];
+
+  let cantidad = 1;
+  let precio = 0;
+  let multi = false;
+
+  if (nums.length === 1) precio = nums[0];
+
+  if (nums.length >= 2) {
+    cantidad = nums[0];
+    precio = nums[1];
+    multi = true;
+  }
+
+  return { texto, cantidad, precio, multi };
+}
+
+
+// ==============================
+// 👀 PREVIEW
+// ==============================
+
+input.addEventListener("input", () => {
+
+  const v = input.value.trim();
+  if (!v) return preview.textContent = "";
+
+  const d = parsear(v);
+
+  if (!d.multi) return preview.textContent = "";
+
+  preview.textContent = `${d.cantidad} x ${d.precio} = $${d.cantidad * d.precio}`;
+});
+
+
+// ==============================
+// ➕ AGREGAR
+// ==============================
+
+input.addEventListener("keydown", (e) => {
+
+  if (e.key !== "Enter") return;
+
+  const v = input.value.trim();
+  if (!v) return;
+
+  const d = parsear(v);
+
+  const subtotal = d.multi ? d.cantidad * d.precio : d.precio;
+
+  ventaActual.push({
+    id: Date.now(),
+    ...d,
+    subtotal
+  });
+
+  totalVenta += subtotal;
+
+  actualizarTotalVenta();
+
+  input.value = "";
+  preview.textContent = "";
+
+  renderPreVenta();
+});
+
+
+// ==============================
+// 🧾 PREVENTA
+// ==============================
+
+function renderPreVenta() {
+
+  const cont = document.getElementById("preVenta");
+
+  cont.innerHTML = "";
+
+  ventaActual.forEach((item, index) => {
+
+    const div = document.createElement("div");
+
+    div.className = "flex justify-between bg-gray-100 p-2 rounded";
+
+    div.innerHTML = `
+      <span>${item.texto}</span>
+      <span>$${item.subtotal}</span>
+    `;
+
+    div.onclick = () => editarItem(index);
+
+    cont.appendChild(div);
+  });
+}
+
+
+// ==============================
+// ✏️ EDITAR
+// ==============================
+
+function editarItem(index) {
+
+  input.value = ventaActual[index].texto;
+
+  totalVenta -= ventaActual[index].subtotal;
+
+  ventaActual.splice(index, 1);
+
+  actualizarTotalVenta();
+  renderPreVenta();
+}
+
+
+// ==============================
+// 🗑 FINALIZAR VENTA
+// ==============================
+
+document.getElementById("btnFinalizar").onclick = () => {
+
+  if (!ventaActual.length) return;
+
+  const venta = {
+    items: ventaActual,
+    total: totalVenta,
+    fecha: new Date().toLocaleString()
+  };
+
+  data[usuarioActual].ventas.push(venta);
+
+  localStorage.setItem("dataPOS", JSON.stringify(data));
+
+  renderVenta(venta);
+
+  reset();
+  modal.close();
+};
+
+
+// ==============================
+// 📊 TOTAL
+// ==============================
+
+function actualizarTotalVenta() {
+  totalVentaSpan.textContent = "$" + totalVenta;
+}
+
+
+// ==============================
+// 📊 TOTAL DEL DÍA
+// ==============================
+
+function actualizarTotalDia() {
+
+  const ventas = data[usuarioActual]?.ventas || [];
+
+  const total = ventas.reduce((a, v) => a + v.total, 0);
+
+  totalDiaSpan.textContent = "$" + total;
+}
+
+
+// ==============================
+// 🔄 RESET
+// ==============================
+
+function reset() {
+
+  ventaActual = [];
+  totalVenta = 0;
+
+  actualizarTotalVenta();
+  renderPreVenta();
+}
+
+
+// ==============================
+// 🧾 RENDER VENTA
+// ==============================
+
+function renderVenta(v) {
+
+  const div = document.createElement("div");
+
+  div.className = "bg-yellow-100 p-4 rounded";
+
+  div.innerHTML = `
+    <div class="font-bold">Venta</div>
+    <div>Total: $${v.total}</div>
+
+    <button class="mt-2 bg-green-500 text-white px-3 py-1 rounded flex items-center gap-2">
+      <i class="bi bi-whatsapp"></i> WhatsApp
     </button>
+  `;
 
-  </div>
-</div>
+  div.querySelector("button").onclick = () => {
 
-<!-- ================= HEADER ================= -->
-<div class="p-4 flex gap-2">
+    const msg = `Venta total: $${v.total}`;
 
-  <button id="btnNuevaVenta" class="bg-green-600 text-white px-4 py-2 rounded">
-    Nueva venta
-  </button>
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+  };
 
-</div>
+  listaVentas.prepend(div);
+}
 
-<!-- ================= VENTAS ================= -->
-<div id="listaVentas" class="p-4 grid gap-4"></div>
 
-<!-- ================= FOOTER ================= -->
-<div class="p-4 bg-white shadow-inner flex justify-between items-center">
+// ==============================
+// 📄 PDF
+// ==============================
 
-  <div>
-    <p class="text-sm text-gray-500">Total del día</p>
-    <p id="totalDia" class="text-xl font-bold text-blue-600">$0</p>
-  </div>
+document.getElementById("btnPDF").onclick = () => {
 
-  <!-- PDF -->
-  <button id="btnPDF" class="bg-black text-white px-4 py-2 rounded">
-    📄 PDF
-  </button>
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
 
-</div>
+  const ventas = data[usuarioActual]?.ventas || [];
 
-<!-- ================= MODAL ================= -->
-<dialog id="modal" class="p-6 rounded-xl w-96 relative">
+  let y = 10;
+  let total = 0;
 
-  <button id="btnCerrar" class="absolute right-3 top-2">✕</button>
+  doc.text("REPORTE DE VENTAS", 10, y);
+  y += 10;
 
-  <h2 class="font-bold mb-2">Venta</h2>
+  ventas.forEach((v, i) => {
 
-  <input id="inputProducto"
-    class="border p-2 w-full mb-2"
-    placeholder="Ej: funda 150 | 2 fundas 120"
-  >
+    doc.text(`Venta ${i + 1}`, 10, y);
+    y += 6;
 
-  <p id="preview" class="text-blue-500 text-sm"></p>
+    v.items.forEach(it => {
+      doc.text(`${it.texto} - $${it.subtotal}`, 10, y);
+      y += 5;
+    });
 
-  <div id="preVenta" class="mt-3 space-y-2"></div>
+    doc.text(`Total: $${v.total}`, 10, y);
+    y += 8;
 
-  <p class="mt-3">Total: <span id="totalVenta">$0</span></p>
+    total += v.total;
+  });
 
-  <button id="btnFinalizar"
-    class="bg-red-500 text-white w-full mt-3 py-2 rounded">
-    Finalizar venta
-  </button>
+  doc.text(`TOTAL DEL DÍA: $${total}`, 10, y + 10);
 
-</dialog>
+  doc.save("reporte.pdf");
+};
 
-<script src="app.js"></script>
 
-</body>
-</html>
+// ==============================
+// 🆕 NUEVA VENTA
+// ==============================
+
+document.getElementById("btnNuevaVenta").onclick = () => {
+  reset();
+  modal.showModal();
+};
+
+
+// ==============================
+// ❌ CERRAR
+// ==============================
+
+document.getElementById("btnCerrar").onclick = () => {
+  modal.close();
+};
+
+
+// ==============================
+// 📦 HISTORIAL
+// ==============================
+
+function renderHistorial() {
+
+  listaVentas.innerHTML = "";
+
+  const ventas = data[usuarioActual]?.ventas || [];
+
+  ventas.forEach(renderVenta);
+}
