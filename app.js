@@ -231,15 +231,15 @@ function renderVenta(v) {
 
     <div class="flex gap-3 mt-2">
 
-      <button class="bg-green-500 text-white px-3 py-1 rounded">
-        <i class="bi bi-whatsapp"></i> WhatsApp
-      </button>
+  <button class="bg-blue-500 text-white px-3 py-1 rounded">
+    📄 Ticket
+  </button>
 
-      <button class="text-red-500">
-        <i class="bi bi-trash"></i>
-      </button>
+  <button class="text-red-500">
+    <i class="bi bi-trash"></i>
+  </button>
 
-    </div>
+</div>
   `;
 
   // 📲 WHATSAPP → IMAGEN REAL
