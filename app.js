@@ -1,3 +1,4 @@
+
 let usuarioActual = null;
 let ventaActual = [];
 let totalVenta = 0;
@@ -66,21 +67,16 @@ function parsear(texto) {
 
   let cantidad = 1;
   let precio = 0;
-  let multi = false;
 
   const t = texto.toLowerCase();
+  const multi = nums.length >= 2;
 
-  const forzar = t.includes("c/u") || t.includes("cada") || t.includes("x");
-
-  if (nums.length === 1) precio = nums[0];
-
-  if (nums.length >= 2) {
-    cantidad = nums[0];
-    precio = nums[1];
-    multi = true;
-  }
-
-  return { texto, cantidad, precio, multi, forzar };
+  return {
+    texto,
+    cantidad: nums[0] || 1,
+    precio: nums[1] || nums[0] || 0,
+    multi
+  };
 }
 
 
@@ -110,6 +106,7 @@ function agregar() {
 
   ventaActual.push({
     id: Date.now(),
+    usuario: usuarioActual,   // 🔥 IMPORTANTE
     ...d,
     subtotal
   });
@@ -151,14 +148,12 @@ function renderPreVenta() {
     div.innerHTML = `
       <span>${item.texto}</span>
 
-      <div class="flex items-center gap-3">
-
+      <div class="flex gap-3 items-center">
         <span>$${item.subtotal}</span>
 
-        <button class="text-red-500 text-lg">
+        <button class="text-red-500">
           <i class="bi bi-trash"></i>
         </button>
-
       </div>
     `;
 
@@ -182,6 +177,7 @@ document.getElementById("btnFinalizar").onclick = () => {
   const venta = {
     items: ventaActual,
     total: totalVenta,
+    usuario: usuarioActual,
     fecha: new Date().toLocaleString()
   };
 
@@ -230,10 +226,10 @@ function renderVenta(v) {
   div.className = "bg-yellow-100 p-4 rounded";
 
   div.innerHTML = `
-    <div class="font-bold mb-2">Venta</div>
-    <div class="mb-2">Total: $${v.total}</div>
+    <div class="font-bold">Venta - ${v.usuario}</div>
+    <div>Total: $${v.total}</div>
 
-    <div class="flex gap-3">
+    <div class="flex gap-3 mt-2">
 
       <button class="bg-green-500 text-white px-3 py-1 rounded">
         <i class="bi bi-whatsapp"></i> WhatsApp
@@ -246,7 +242,7 @@ function renderVenta(v) {
     </div>
   `;
 
-  // WHATSAPP → IMAGEN REAL
+  // 📲 WHATSAPP → IMAGEN REAL
   div.querySelector(".bg-green-500").onclick = () => {
 
     html2canvas(div).then(canvas => {
@@ -265,7 +261,7 @@ function renderVenta(v) {
     });
   };
 
-  // ELIMINAR
+  // 🗑 eliminar
   div.querySelector(".text-red-500").onclick = () => {
 
     const arr = data[usuarioActual].ventas;
@@ -308,7 +304,7 @@ document.getElementById("btnCerrar").onclick = () => {
 };
 
 
-// PDF (FIX FINAL BONITO)
+// PDF (ESTABLE + BONITO + USUARIO)
 document.getElementById("btnPDF").onclick = () => {
 
   const { jsPDF } = window.jspdf;
@@ -326,7 +322,7 @@ document.getElementById("btnPDF").onclick = () => {
   ventas.forEach((v, i) => {
 
     doc.setFontSize(12);
-    doc.text(`Venta ${i + 1}`, 10, y);
+    doc.text(`Venta ${i + 1} - ${v.usuario}`, 10, y);
     y += 6;
 
     v.items.forEach(it => {
