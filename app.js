@@ -60,6 +60,10 @@ document.getElementById("btnLogin").onclick = () => {
 
 function init() {
 
+  if (window.matchMedia("(display-mode: standalone)").matches) {
+  document.getElementById("btnInstall").style.display = "none";
+}
+
   document.getElementById("userLabel").textContent = usuarioActual;
 
 const btnGlobal = document.getElementById("btnPDFGlobal");
@@ -465,23 +469,6 @@ document.getElementById("btnLogout").onclick = () => {
 
 
 
-let deferredPrompt;
-
-window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-});
-
-document.getElementById("btnInstall").onclick = async () => {
-
-  if (!deferredPrompt) {
-    alert("Ya está instalada o no es compatible");
-    return;
-  }
-
-  deferredPrompt.prompt();
-  deferredPrompt = null;
-};
 
 
 
@@ -567,5 +554,42 @@ togglePin.onclick = () => {
   togglePin.innerHTML = visible
     ? '<i class="bi bi-eye-slash"></i>'
     : '<i class="bi bi-eye"></i>';
+};
+
+
+
+let deferredPrompt;
+
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+
+  document.getElementById("btnInstall").style.display = "block";
+});
+
+
+
+
+window.addEventListener("appinstalled", () => {
+  console.log("PWA instalada");
+
+  document.getElementById("btnInstall").style.display = "none";
+});
+
+
+
+document.getElementById("btnInstall").onclick = async () => {
+
+  if (!deferredPrompt) return;
+
+  deferredPrompt.prompt();
+
+  const result = await deferredPrompt.userChoice;
+
+  if (result.outcome === "accepted") {
+    console.log("Instalada");
+  }
+
+  deferredPrompt = null;
 };
 
