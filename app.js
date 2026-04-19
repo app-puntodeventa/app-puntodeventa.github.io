@@ -1,4 +1,3 @@
-
 let usuarioActual = null;
 let ventaActual = [];
 let totalVenta = 0;
@@ -22,18 +21,22 @@ const totalDiaSpan = document.getElementById("totalDia");
 const listaVentas = document.getElementById("listaVentas");
 
 
-// LOGIN
+// ==============================
+// 🔐 LOGIN (FIX: ahora usa nombre, no PIN)
+// ==============================
 document.getElementById("btnLogin").onclick = () => {
 
   const pin = document.getElementById("pinInput").value;
 
   if (!VALID_PINS[pin]) return alert("PIN incorrecto");
 
-  usuarioActual = pin;
+  const nombreUsuario = VALID_PINS[pin];
 
-  if (!data[pin]) data[pin] = { ventas: [] };
+  usuarioActual = nombreUsuario;
 
-  localStorage.setItem("usuarioActivo", pin);
+  if (!data[nombreUsuario]) data[nombreUsuario] = { ventas: [] };
+
+  localStorage.setItem("usuarioActivo", nombreUsuario);
 
   document.getElementById("loginScreen").style.display = "none";
 
@@ -41,17 +44,19 @@ document.getElementById("btnLogin").onclick = () => {
 };
 
 
-// INIT
+// ==============================
+// 🚀 INIT (FIX)
+// ==============================
 function init() {
 
-  const pin = localStorage.getItem("usuarioActivo");
+  const user = localStorage.getItem("usuarioActivo");
 
-  if (!VALID_PINS[pin]) {
+  if (!user) {
     document.getElementById("loginScreen").style.display = "flex";
     return;
   }
 
-  usuarioActual = pin;
+  usuarioActual = user;
 
   renderHistorial();
   actualizarTotalDia();
@@ -60,27 +65,25 @@ function init() {
 init();
 
 
-// PARSER
+// ==============================
+// 🧠 PARSER
+// ==============================
 function parsear(texto) {
 
   const nums = texto.match(/\d+(\.\d+)?/g)?.map(Number) || [];
-
-  let cantidad = 1;
-  let precio = 0;
-
-  const t = texto.toLowerCase();
-  const multi = nums.length >= 2;
 
   return {
     texto,
     cantidad: nums[0] || 1,
     precio: nums[1] || nums[0] || 0,
-    multi
+    multi: nums.length >= 2
   };
 }
 
 
-// PREVIEW
+// ==============================
+// 👀 PREVIEW
+// ==============================
 input.addEventListener("input", () => {
 
   const v = input.value.trim();
@@ -94,7 +97,9 @@ input.addEventListener("input", () => {
 });
 
 
-// AGREGAR
+// ==============================
+// ➕ AGREGAR
+// ==============================
 function agregar() {
 
   const v = input.value.trim();
@@ -106,7 +111,7 @@ function agregar() {
 
   ventaActual.push({
     id: Date.now(),
-    usuario: usuarioActual,   // 🔥 IMPORTANTE
+    usuario: usuarioActual,
     ...d,
     subtotal
   });
@@ -132,11 +137,12 @@ input.addEventListener("keydown", e => {
 document.getElementById("btnAdd").onclick = agregar;
 
 
-// PREVENTA
+// ==============================
+// 🧾 PREVENTA
+// ==============================
 function renderPreVenta() {
 
   const cont = document.getElementById("preVenta");
-
   cont.innerHTML = "";
 
   ventaActual.forEach((item, i) => {
@@ -169,7 +175,9 @@ function renderPreVenta() {
 }
 
 
-// FINALIZAR
+// ==============================
+// 💰 FINALIZAR
+// ==============================
 document.getElementById("btnFinalizar").onclick = () => {
 
   if (!ventaActual.length) return;
@@ -192,13 +200,13 @@ document.getElementById("btnFinalizar").onclick = () => {
 };
 
 
-// TOTAL
+// ==============================
+// 📊 TOTALES
+// ==============================
 function actualizarTotalVenta() {
   totalVentaSpan.textContent = "$" + totalVenta;
 }
 
-
-// TOTAL DIA
 function actualizarTotalDia() {
 
   const ventas = data[usuarioActual]?.ventas || [];
@@ -209,7 +217,9 @@ function actualizarTotalDia() {
 }
 
 
-// RESET
+// ==============================
+// 🔄 RESET
+// ==============================
 function reset() {
   ventaActual = [];
   totalVenta = 0;
@@ -218,7 +228,9 @@ function reset() {
 }
 
 
-// VENTA CARD
+// ==============================
+// 🧾 VENTA CARD
+// ==============================
 function renderVenta(v) {
 
   const div = document.createElement("div");
@@ -226,27 +238,29 @@ function renderVenta(v) {
   div.className = "bg-yellow-100 p-4 rounded";
 
   div.innerHTML = `
-    <div class="font-bold">Venta - ${v.usuario}</div>
+    <div class="font-bold text-gray-700">🧾 ${v.usuario}</div>
     <div>Total: $${v.total}</div>
 
     <div class="flex gap-3 mt-2">
 
-  <button class="bg-blue-500 text-white px-3 py-1 rounded">
-    📄 Ticket
-  </button>
+      <button class="bg-blue-500 text-white px-3 py-1 rounded">
+        📄 Ticket
+      </button>
 
-  <button class="text-red-500">
-    <i class="bi bi-trash"></i>
-  </button>
+      <button class="text-red-500">
+        <i class="bi bi-trash"></i>
+      </button>
 
-</div>
+    </div>
   `;
 
-  // 📲 WHATSAPP → IMAGEN REAL
-  // 📄 TICKET (DESCARGA IMAGEN)
+  // 📄 TICKET (MEJOR CALIDAD)
   div.querySelector(".bg-blue-500").onclick = () => {
 
-    html2canvas(div).then(canvas => {
+    html2canvas(div, {
+      scale: 2,
+      backgroundColor: "#ffffff"
+    }).then(canvas => {
 
       const img = canvas.toDataURL("image/png");
 
@@ -276,7 +290,9 @@ function renderVenta(v) {
 }
 
 
-// HISTORIAL
+// ==============================
+// 📚 HISTORIAL
+// ==============================
 function renderHistorial() {
 
   listaVentas.innerHTML = "";
@@ -287,20 +303,26 @@ function renderHistorial() {
 }
 
 
-// OPEN
+// ==============================
+// 🆕 NUEVA VENTA
+// ==============================
 document.getElementById("btnNuevaVenta").onclick = () => {
   reset();
   modal.showModal();
 };
 
 
-// CLOSE
+// ==============================
+// ❌ CERRAR
+// ==============================
 document.getElementById("btnCerrar").onclick = () => {
   modal.close();
 };
 
 
-// PDF (ESTABLE + BONITO + USUARIO)
+// ==============================
+// 📄 PDF BONITO FINAL
+// ==============================
 document.getElementById("btnPDF").onclick = () => {
 
   const { jsPDF } = window.jspdf;
@@ -311,30 +333,48 @@ document.getElementById("btnPDF").onclick = () => {
   let y = 10;
   let total = 0;
 
-  doc.setFontSize(16);
+  // HEADER
+  doc.setFontSize(18);
   doc.text("REPORTE DE VENTAS", 10, y);
-  y += 10;
+  y += 8;
+
+  doc.setFontSize(12);
+  doc.text(`Usuario: ${usuarioActual}`, 10, y);
+  y += 8;
+
+  doc.line(10, y, 200, y);
+  y += 8;
 
   ventas.forEach((v, i) => {
 
     doc.setFontSize(12);
-    doc.text(`Venta ${i + 1} - ${v.usuario}`, 10, y);
+    doc.text(`Venta #${i + 1}`, 10, y);
     y += 6;
 
+    doc.setFontSize(10);
+
     v.items.forEach(it => {
-      doc.setFontSize(10);
-      doc.text(`${it.texto} = $${it.subtotal}`, 10, y);
+      doc.text(`• ${it.texto}   $${it.subtotal}`, 10, y);
       y += 5;
     });
 
+    doc.setFontSize(11);
     doc.text(`Total: $${v.total}`, 10, y);
-    y += 10;
+    y += 8;
+
+    doc.line(10, y, 200, y);
+    y += 6;
 
     total += v.total;
+
+    if (y > 270) {
+      doc.addPage();
+      y = 10;
+    }
   });
 
   doc.setFontSize(14);
   doc.text(`TOTAL DEL DÍA: $${total}`, 10, y + 10);
 
-  doc.save("reporte.pdf");
+  doc.save(`reporte-${usuarioActual}.pdf`);
 };
