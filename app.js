@@ -68,15 +68,54 @@ init();
 // ==============================
 // 🧠 PARSER
 // ==============================
+
 function parsear(texto) {
 
-  const nums = texto.match(/\d+(\.\d+)?/g)?.map(Number) || [];
+  const t = texto.toLowerCase();
+
+  const nums = t.match(/\d+(\.\d+)?/g)?.map(Number) || [];
+
+  let cantidad = 1;
+  let precio = 0;
+  let multi = false;
+
+  // palabras clave
+  const esMultiplicacion =
+    t.includes("cada") ||
+    t.includes("cada uno") ||
+    t.includes("de a") ||
+    t.includes("c/u") ||
+    t.includes(" x ");
+
+  const esTotalDirecto =
+    t.includes(" por ") ||
+    t.includes(" son ") ||
+    t.includes(" total") ||
+    t.includes(" pesos de");
+
+  if (nums.length === 1) {
+    precio = nums[0];
+  }
+
+  if (nums.length >= 2) {
+    cantidad = nums[0];
+    precio = nums[1];
+
+    if (esMultiplicacion) {
+      multi = true;
+    } else if (esTotalDirecto) {
+      multi = false;
+    } else {
+      // fallback inteligente
+      multi = true;
+    }
+  }
 
   return {
     texto,
-    cantidad: nums[0] || 1,
-    precio: nums[1] || nums[0] || 0,
-    multi: nums.length >= 2
+    cantidad,
+    precio,
+    multi
   };
 }
 
