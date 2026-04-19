@@ -547,3 +547,25 @@ if ("serviceWorker" in navigator) {
     .then(() => console.log("Service Worker activo"))
     .catch(err => console.log("Error SW:", err));
 }
+
+
+
+
+
+
+const pinInput = document.getElementById("pinInput");
+const togglePin = document.getElementById("togglePin");
+
+let visible = false;
+
+togglePin.onclick = () => {
+
+  visible = !visible;
+
+  pinInput.type = visible ? "text" : "password";
+
+  togglePin.innerHTML = visible
+    ? '<i class="bi bi-eye-slash"></i>'
+    : '<i class="bi bi-eye"></i>';
+};
+
