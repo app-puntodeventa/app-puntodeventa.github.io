@@ -60,9 +60,7 @@ document.getElementById("btnLogin").onclick = () => {
 
 function init() {
 
-  if (window.matchMedia("(display-mode: standalone)").matches) {
-  document.getElementById("btnInstall").style.display = "none";
-}
+checkInstallStatus();
 
   document.getElementById("userLabel").textContent = usuarioActual;
 
@@ -592,4 +590,15 @@ document.getElementById("btnInstall").onclick = async () => {
 
   deferredPrompt = null;
 };
+
+
+function checkInstallStatus() {
+
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches
+    || window.navigator.standalone === true;
+
+  if (isStandalone) {
+    document.getElementById("btnInstall").style.display = "none";
+  }
+}
 
