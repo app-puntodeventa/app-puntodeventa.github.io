@@ -342,8 +342,6 @@ function renderVenta(v) {
     }
   };
 
-  listaVentas.prepend(div);
-}
  
 // ==============================
 // 📚 HISTORIAL
