@@ -91,25 +91,30 @@
 <div id="listaVentas" class="p-4 grid gap-4"></div>
 
 <!-- FOOTER -->
-<div class="p-4 bg-white shadow-inner flex justify-between items-center">
 
-  <div>
-    <p class="text-sm text-gray-500">Total del día</p>
-    <p id="totalDia" class="text-xl font-bold text-blue-600">$0</p>
+  <div class="p-4 bg-white shadow-inner flex flex-col gap-3">
+
+  <!-- TOTAL -->
+  <div class="flex justify-between items-center">
+    <div>
+      <p class="text-sm text-gray-500">Total del día</p>
+      <p id="totalDia" class="text-xl font-bold text-blue-600">$0</p>
+    </div>
   </div>
 
-<div class="flex gap-2">
-  <!-- PDF normal -->
-  <button id="btnPDF" class="bg-black text-white px-4 py-2 rounded text-sm">
-    📄 PDF DEL DÍA
-  </button>
+  <!-- BOTONES PDF -->
+  <div class="flex gap-2">
+    <button id="btnPDF"
+      class="bg-black text-white px-4 py-2 rounded text-sm">
+      📄 PDF
+    </button>
 
-  <!-- PDF admin -->
-  <button id="btnPDFGlobal" style="display:none;"
-    class="bg-red-600 text-white px-4 py-2 rounded text-sm font-bold shadow-lg">
-    📊 PDF GLOBAL
-  </button>
-</div>
+    <button id="btnPDFGlobal"
+      class="bg-red-600 text-white px-4 py-2 rounded text-sm font-bold shadow-lg"
+      style="display:none;">
+      📊 PDF GLOBAL
+    </button>
+  </div>
 
 </div>
 
