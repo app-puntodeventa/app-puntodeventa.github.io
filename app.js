@@ -190,7 +190,9 @@ function renderPreVenta() {
       <span>$${item.subtotal}</span>
       
       <!-- 🗑 eliminar -->
-      <button class="text-red-500 ml-2">✕</button>
+    <button class="text-red-500 ml-2">
+  <i class="bi bi-trash"></i>
+</button>
     `;
 
     // eliminar FIX REAL
