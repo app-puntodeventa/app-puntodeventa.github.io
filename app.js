@@ -275,27 +275,45 @@ function renderVenta(v) {
 
   const div = document.createElement("div");
 
-  div.className = "bg-yellow-100 p-4 rounded";
+  div.className = "bg-yellow-100 p-4 rounded relative";
 
   div.innerHTML = `
-    <div class="font-bold">Venta</div>
-    <div>Total: $${v.total}</div>
+    <div class="font-bold mb-1">Venta</div>
+    <div class="text-sm mb-2">Total: $${v.total}</div>
 
-    <button class="mt-2 bg-green-500 text-white px-3 py-1 rounded flex items-center gap-2">
+    <button class="bg-green-500 text-white px-3 py-1 rounded flex items-center gap-2">
       <i class="bi bi-whatsapp"></i> WhatsApp
+    </button>
+
+    <!-- 🗑 BOTÓN ELIMINAR -->
+    <button class="absolute top-2 right-2 text-red-600 text-lg">
+      ✕
     </button>
   `;
 
+  // WhatsApp
   div.querySelector("button").onclick = () => {
-
     const msg = `Venta total: $${v.total}`;
-
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+  };
+
+  // ELIMINAR
+  div.querySelector(".text-red-600").onclick = () => {
+
+    const ventas = data[usuarioActual].ventas;
+
+    const index = ventas.findIndex(x => x.fecha === v.fecha && x.total === v.total);
+
+    if (index !== -1) {
+      ventas.splice(index, 1);
+      localStorage.setItem("dataPOS", JSON.stringify(data));
+      renderHistorial();
+      actualizarTotalDia();
+    }
   };
 
   listaVentas.prepend(div);
 }
-
 
 // ==============================
 // 📄 PDF
@@ -309,32 +327,38 @@ document.getElementById("btnPDF").onclick = () => {
   const ventas = data[usuarioActual]?.ventas || [];
 
   let y = 10;
-  let total = 0;
+  let totalDia = 0;
 
-  doc.text("REPORTE DE VENTAS", 10, y);
+  doc.setFontSize(16);
+  doc.text("REPORTE DE VENTAS DEL DÍA", 10, y);
   y += 10;
 
   ventas.forEach((v, i) => {
 
-    doc.text(`Venta ${i + 1}`, 10, y);
+    doc.setFontSize(12);
+    doc.text(`VENTA ${i + 1} - ${v.fecha}`, 10, y);
     y += 6;
 
     v.items.forEach(it => {
-      doc.text(`${it.texto} - $${it.subtotal}`, 10, y);
+      doc.setFontSize(10);
+      doc.text(`• ${it.texto} = $${it.subtotal}`, 12, y);
       y += 5;
     });
 
-    doc.text(`Total: $${v.total}`, 10, y);
-    y += 8;
+    doc.setFontSize(11);
+    doc.text(`SUBTOTAL: $${v.total}`, 10, y);
+    y += 10;
 
-    total += v.total;
+    totalDia += v.total;
   });
 
-  doc.text(`TOTAL DEL DÍA: $${total}`, 10, y + 10);
+  y += 5;
 
-  doc.save("reporte.pdf");
+  doc.setFontSize(14);
+  doc.text(`TOTAL DEL DÍA: $${totalDia}`, 10, y);
+
+  doc.save("reporte_ventas.pdf");
 };
-
 
 // ==============================
 // 🆕 NUEVA VENTA
