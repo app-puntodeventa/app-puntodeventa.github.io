@@ -239,6 +239,8 @@ document.getElementById("btnFinalizar").onclick = () => {
 
   reset();
   modal.close();
+actualizarTotalDia();
+  
 };
 
 
