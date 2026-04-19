@@ -60,6 +60,8 @@ document.getElementById("btnLogin").onclick = () => {
 
 function init() {
 
+  document.getElementById("userLabel").textContent = usuarioActual;
+
   const user = localStorage.getItem("usuarioActivo");
 
   if (!user) {
@@ -438,3 +440,41 @@ document.getElementById("btnPDF").onclick = () => {
 
   doc.save(`reporte-${usuarioActual}.pdf`);
 };
+
+
+
+document.getElementById("btnLogout").onclick = () => {
+
+  localStorage.removeItem("usuarioActivo");
+
+  usuarioActual = null;
+
+  location.reload();
+};
+
+
+
+let deferredPrompt;
+
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+});
+
+document.getElementById("btnInstall").onclick = async () => {
+
+  if (!deferredPrompt) {
+    alert("Ya está instalada o no es compatible");
+    return;
+  }
+
+  deferredPrompt.prompt();
+  deferredPrompt = null;
+};
+
+
+
+
+
+
+
