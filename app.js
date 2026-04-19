@@ -1,58 +1,36 @@
-
-// ==============================
-// 🔥 ESTADO GLOBAL
-// ==============================
-
 let usuarioActual = null;
 let ventaActual = [];
 let totalVenta = 0;
 
 let data = JSON.parse(localStorage.getItem("dataPOS")) || {};
 
-
-// ==============================
-// 🔐 PINES
-// ==============================
-
+// PIN FIJOS
 const VALID_PINS = {
   "4829": "ADMIN",
   "7391": "TURNO 1",
   "6158": "TURNO 2"
 };
 
-
-// ==============================
-// 🎯 DOM
-// ==============================
-
+// DOM
 const modal = document.getElementById("modal");
 const input = document.getElementById("inputProducto");
 const preview = document.getElementById("preview");
 
 const totalVentaSpan = document.getElementById("totalVenta");
 const totalDiaSpan = document.getElementById("totalDia");
-
 const listaVentas = document.getElementById("listaVentas");
 
 
-// ==============================
-// 🔐 LOGIN
-// ==============================
-
+// LOGIN
 document.getElementById("btnLogin").onclick = () => {
 
   const pin = document.getElementById("pinInput").value;
 
-  if (!VALID_PINS[pin]) {
-    alert("PIN incorrecto");
-    return;
-  }
+  if (!VALID_PINS[pin]) return alert("PIN incorrecto");
 
   usuarioActual = pin;
 
-  if (!data[pin]) {
-    data[pin] = { ventas: [] };
-  }
+  if (!data[pin]) data[pin] = { ventas: [] };
 
   localStorage.setItem("usuarioActivo", pin);
 
@@ -62,10 +40,7 @@ document.getElementById("btnLogin").onclick = () => {
 };
 
 
-// ==============================
-// 🚀 INIT
-// ==============================
-
+// INIT
 function init() {
 
   const pin = localStorage.getItem("usuarioActivo");
@@ -84,10 +59,7 @@ function init() {
 init();
 
 
-// ==============================
-// 🧠 PARSER
-// ==============================
-
+// PARSER
 function parsear(texto) {
 
   const nums = texto.match(/\d+(\.\d+)?/g)?.map(Number) || [];
@@ -95,6 +67,10 @@ function parsear(texto) {
   let cantidad = 1;
   let precio = 0;
   let multi = false;
+
+  const t = texto.toLowerCase();
+
+  const forzar = t.includes("c/u") || t.includes("cada") || t.includes("x");
 
   if (nums.length === 1) precio = nums[0];
 
@@ -104,15 +80,26 @@ function parsear(texto) {
     multi = true;
   }
 
-  return { texto, cantidad, precio, multi };
+  return { texto, cantidad, precio, multi, forzar };
 }
 
 
-// ==============================
-// ➕ AGREGAR PRODUCTO
-// ==============================
+// PREVIEW
+input.addEventListener("input", () => {
 
-function agregarProducto() {
+  const v = input.value.trim();
+  if (!v) return preview.textContent = "";
+
+  const d = parsear(v);
+
+  if (!d.multi) return preview.textContent = "";
+
+  preview.textContent = `${d.cantidad} x ${d.precio} = $${d.cantidad * d.precio}`;
+});
+
+
+// AGREGAR
+function agregar() {
 
   const v = input.value.trim();
   if (!v) return;
@@ -136,69 +123,48 @@ function agregarProducto() {
 
   renderPreVenta();
 
-  // 📱 vibración móvil
   navigator.vibrate?.(30);
 }
 
 
-// ==============================
 // ENTER + BOTÓN
-// ==============================
-
-input.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") agregarProducto();
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter") agregar();
 });
 
-document.getElementById("btnAdd").onclick = agregarProducto;
+document.getElementById("btnAdd").onclick = agregar;
 
 
-// ==============================
-// 👀 PREVIEW
-// ==============================
-
-input.addEventListener("input", () => {
-
-  const v = input.value.trim();
-  if (!v) return preview.textContent = "";
-
-  const d = parsear(v);
-
-  if (!d.multi) return preview.textContent = "";
-
-  preview.textContent = `${d.cantidad} x ${d.precio} = $${d.cantidad * d.precio}`;
-});
-
-
-// ==============================
-// 🧾 RENDER PREVENTA
-// ==============================
-
+// PREVENTA
 function renderPreVenta() {
 
   const cont = document.getElementById("preVenta");
 
   cont.innerHTML = "";
 
-  ventaActual.forEach((item, index) => {
+  ventaActual.forEach((item, i) => {
 
     const div = document.createElement("div");
 
-    div.className = "flex justify-between bg-gray-100 p-2 rounded";
+    div.className = "flex justify-between bg-gray-100 p-2 rounded items-center";
 
     div.innerHTML = `
       <span>${item.texto}</span>
-      <span>$${item.subtotal}</span>
-      
-      <!-- 🗑 eliminar -->
-    <button class="text-red-500 ml-2">
-  <i class="bi bi-trash"></i>
-</button>
+
+      <div class="flex items-center gap-3">
+
+        <span>$${item.subtotal}</span>
+
+        <button class="text-red-500 text-lg">
+          <i class="bi bi-trash"></i>
+        </button>
+
+      </div>
     `;
 
-    // eliminar FIX REAL
     div.querySelector("button").onclick = () => {
       totalVenta -= item.subtotal;
-      ventaActual.splice(index, 1);
+      ventaActual.splice(i, 1);
       actualizarTotalVenta();
       renderPreVenta();
     };
@@ -208,10 +174,7 @@ function renderPreVenta() {
 }
 
 
-// ==============================
 // FINALIZAR
-// ==============================
-
 document.getElementById("btnFinalizar").onclick = () => {
 
   if (!ventaActual.length) return;
@@ -233,19 +196,13 @@ document.getElementById("btnFinalizar").onclick = () => {
 };
 
 
-// ==============================
 // TOTAL
-// ==============================
-
 function actualizarTotalVenta() {
   totalVentaSpan.textContent = "$" + totalVenta;
 }
 
 
-// ==============================
 // TOTAL DIA
-// ==============================
-
 function actualizarTotalDia() {
 
   const ventas = data[usuarioActual]?.ventas || [];
@@ -256,24 +213,16 @@ function actualizarTotalDia() {
 }
 
 
-// ==============================
 // RESET
-// ==============================
-
 function reset() {
-
   ventaActual = [];
   totalVenta = 0;
-
   actualizarTotalVenta();
   renderPreVenta();
 }
 
 
-// ==============================
-// RENDER VENTA
-// ==============================
-
+// VENTA CARD
 function renderVenta(v) {
 
   const div = document.createElement("div");
@@ -281,18 +230,24 @@ function renderVenta(v) {
   div.className = "bg-yellow-100 p-4 rounded";
 
   div.innerHTML = `
-    <div class="font-bold">Venta</div>
-    <div>Total: $${v.total}</div>
+    <div class="font-bold mb-2">Venta</div>
+    <div class="mb-2">Total: $${v.total}</div>
 
-    <button class="bg-green-500 text-white px-3 py-1 rounded mt-2 flex items-center gap-2">
-      <i class="bi bi-whatsapp"></i> WhatsApp
-    </button>
+    <div class="flex gap-3">
 
-    <button class="text-red-600 ml-3">Eliminar</button>
+      <button class="bg-green-500 text-white px-3 py-1 rounded">
+        <i class="bi bi-whatsapp"></i> WhatsApp
+      </button>
+
+      <button class="text-red-500">
+        <i class="bi bi-trash"></i>
+      </button>
+
+    </div>
   `;
 
-  // WhatsApp
-  div.querySelector("button").onclick = () => {
+  // WHATSAPP → IMAGEN REAL
+  div.querySelector(".bg-green-500").onclick = () => {
 
     html2canvas(div).then(canvas => {
 
@@ -310,15 +265,15 @@ function renderVenta(v) {
     });
   };
 
-  // eliminar venta
-  div.querySelector("button.text-red-600").onclick = () => {
+  // ELIMINAR
+  div.querySelector(".text-red-500").onclick = () => {
 
-    const ventas = data[usuarioActual].ventas;
+    const arr = data[usuarioActual].ventas;
 
-    const i = ventas.indexOf(v);
+    const i = arr.indexOf(v);
 
     if (i !== -1) {
-      ventas.splice(i, 1);
+      arr.splice(i, 1);
       localStorage.setItem("dataPOS", JSON.stringify(data));
       renderHistorial();
       actualizarTotalDia();
@@ -329,10 +284,7 @@ function renderVenta(v) {
 }
 
 
-// ==============================
 // HISTORIAL
-// ==============================
-
 function renderHistorial() {
 
   listaVentas.innerHTML = "";
@@ -343,29 +295,20 @@ function renderHistorial() {
 }
 
 
-// ==============================
-// OPEN MODAL
-// ==============================
-
+// OPEN
 document.getElementById("btnNuevaVenta").onclick = () => {
   reset();
   modal.showModal();
 };
 
 
-// ==============================
-// CLOSE MODAL
-// ==============================
-
+// CLOSE
 document.getElementById("btnCerrar").onclick = () => {
   modal.close();
 };
 
 
-// ==============================
-// PDF
-// ==============================
-
+// PDF (FIX FINAL BONITO)
 document.getElementById("btnPDF").onclick = () => {
 
   const { jsPDF } = window.jspdf;
@@ -376,16 +319,19 @@ document.getElementById("btnPDF").onclick = () => {
   let y = 10;
   let total = 0;
 
+  doc.setFontSize(16);
   doc.text("REPORTE DE VENTAS", 10, y);
   y += 10;
 
   ventas.forEach((v, i) => {
 
+    doc.setFontSize(12);
     doc.text(`Venta ${i + 1}`, 10, y);
     y += 6;
 
     v.items.forEach(it => {
-      doc.text(`${it.texto} - $${it.subtotal}`, 10, y);
+      doc.setFontSize(10);
+      doc.text(`${it.texto} = $${it.subtotal}`, 10, y);
       y += 5;
     });
 
@@ -395,6 +341,7 @@ document.getElementById("btnPDF").onclick = () => {
     total += v.total;
   });
 
+  doc.setFontSize(14);
   doc.text(`TOTAL DEL DÍA: $${total}`, 10, y + 10);
 
   doc.save("reporte.pdf");
