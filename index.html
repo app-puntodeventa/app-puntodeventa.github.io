@@ -27,10 +27,20 @@
   <div class="bg-white p-6 rounded-xl w-72 text-center">
     <h2 class="font-bold mb-3">Acceso</h2>
 
-    <input id="pinInput"
-      type="password"
-      class="border p-2 w-full text-center"
-      placeholder="PIN">
+   <div class="relative">
+
+  <input id="pinInput"
+    type="password"
+    class="border p-2 w-full text-center pr-10"
+    placeholder="PIN">
+
+  <button id="togglePin"
+    type="button"
+    class="absolute right-2 top-2 text-gray-500">
+    <i class="bi bi-eye"></i>
+  </button>
+
+</div>
 
     <button id="btnLogin"
       class="bg-blue-600 text-white w-full mt-3 py-2 rounded">
