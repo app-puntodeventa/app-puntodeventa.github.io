@@ -11,7 +11,7 @@ let data = JSON.parse(localStorage.getItem("dataPOS")) || {};
 
 
 // ==============================
-// 🔐 PINES FIJOS (SEGURIDAD BÁSICA)
+// 🔐 PINES
 // ==============================
 
 const VALID_PINS = {
@@ -36,7 +36,7 @@ const listaVentas = document.getElementById("listaVentas");
 
 
 // ==============================
-// 🔐 LOGIN REAL
+// 🔐 LOGIN
 // ==============================
 
 document.getElementById("btnLogin").onclick = () => {
@@ -51,10 +51,7 @@ document.getElementById("btnLogin").onclick = () => {
   usuarioActual = pin;
 
   if (!data[pin]) {
-    data[pin] = {
-      nombre: VALID_PINS[pin],
-      ventas: []
-    };
+    data[pin] = { ventas: [] };
   }
 
   localStorage.setItem("usuarioActivo", pin);
@@ -66,14 +63,14 @@ document.getElementById("btnLogin").onclick = () => {
 
 
 // ==============================
-// 🚀 INIT (BLOQUEA SIN LOGIN)
+// 🚀 INIT
 // ==============================
 
 function init() {
 
   const pin = localStorage.getItem("usuarioActivo");
 
-  if (!pin || !VALID_PINS[pin]) {
+  if (!VALID_PINS[pin]) {
     document.getElementById("loginScreen").style.display = "flex";
     return;
   }
@@ -112,29 +109,10 @@ function parsear(texto) {
 
 
 // ==============================
-// 👀 PREVIEW
+// ➕ AGREGAR PRODUCTO
 // ==============================
 
-input.addEventListener("input", () => {
-
-  const v = input.value.trim();
-  if (!v) return preview.textContent = "";
-
-  const d = parsear(v);
-
-  if (!d.multi) return preview.textContent = "";
-
-  preview.textContent = `${d.cantidad} x ${d.precio} = $${d.cantidad * d.precio}`;
-});
-
-
-// ==============================
-// ➕ AGREGAR
-// ==============================
-
-input.addEventListener("keydown", (e) => {
-
-  if (e.key !== "Enter") return;
+function agregarProducto() {
 
   const v = input.value.trim();
   if (!v) return;
@@ -157,11 +135,42 @@ input.addEventListener("keydown", (e) => {
   preview.textContent = "";
 
   renderPreVenta();
+
+  // 📱 vibración móvil
+  navigator.vibrate?.(30);
+}
+
+
+// ==============================
+// ENTER + BOTÓN
+// ==============================
+
+input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") agregarProducto();
+});
+
+document.getElementById("btnAdd").onclick = agregarProducto;
+
+
+// ==============================
+// 👀 PREVIEW
+// ==============================
+
+input.addEventListener("input", () => {
+
+  const v = input.value.trim();
+  if (!v) return preview.textContent = "";
+
+  const d = parsear(v);
+
+  if (!d.multi) return preview.textContent = "";
+
+  preview.textContent = `${d.cantidad} x ${d.precio} = $${d.cantidad * d.precio}`;
 });
 
 
 // ==============================
-// 🧾 PREVENTA
+// 🧾 RENDER PREVENTA
 // ==============================
 
 function renderPreVenta() {
@@ -179,9 +188,18 @@ function renderPreVenta() {
     div.innerHTML = `
       <span>${item.texto}</span>
       <span>$${item.subtotal}</span>
+      
+      <!-- 🗑 eliminar -->
+      <button class="text-red-500 ml-2">✕</button>
     `;
 
-    div.onclick = () => editarItem(index);
+    // eliminar FIX REAL
+    div.querySelector("button").onclick = () => {
+      totalVenta -= item.subtotal;
+      ventaActual.splice(index, 1);
+      actualizarTotalVenta();
+      renderPreVenta();
+    };
 
     cont.appendChild(div);
   });
@@ -189,24 +207,7 @@ function renderPreVenta() {
 
 
 // ==============================
-// ✏️ EDITAR
-// ==============================
-
-function editarItem(index) {
-
-  input.value = ventaActual[index].texto;
-
-  totalVenta -= ventaActual[index].subtotal;
-
-  ventaActual.splice(index, 1);
-
-  actualizarTotalVenta();
-  renderPreVenta();
-}
-
-
-// ==============================
-// 🗑 FINALIZAR VENTA
+// FINALIZAR
 // ==============================
 
 document.getElementById("btnFinalizar").onclick = () => {
@@ -231,7 +232,7 @@ document.getElementById("btnFinalizar").onclick = () => {
 
 
 // ==============================
-// 📊 TOTAL
+// TOTAL
 // ==============================
 
 function actualizarTotalVenta() {
@@ -240,7 +241,7 @@ function actualizarTotalVenta() {
 
 
 // ==============================
-// 📊 TOTAL DEL DÍA
+// TOTAL DIA
 // ==============================
 
 function actualizarTotalDia() {
@@ -254,7 +255,7 @@ function actualizarTotalDia() {
 
 
 // ==============================
-// 🔄 RESET
+// RESET
 // ==============================
 
 function reset() {
@@ -268,44 +269,54 @@ function reset() {
 
 
 // ==============================
-// 🧾 RENDER VENTA
+// RENDER VENTA
 // ==============================
 
 function renderVenta(v) {
 
   const div = document.createElement("div");
 
-  div.className = "bg-yellow-100 p-4 rounded relative";
+  div.className = "bg-yellow-100 p-4 rounded";
 
   div.innerHTML = `
-    <div class="font-bold mb-1">Venta</div>
-    <div class="text-sm mb-2">Total: $${v.total}</div>
+    <div class="font-bold">Venta</div>
+    <div>Total: $${v.total}</div>
 
-    <button class="bg-green-500 text-white px-3 py-1 rounded flex items-center gap-2">
+    <button class="bg-green-500 text-white px-3 py-1 rounded mt-2 flex items-center gap-2">
       <i class="bi bi-whatsapp"></i> WhatsApp
     </button>
 
-    <!-- 🗑 BOTÓN ELIMINAR -->
-    <button class="absolute top-2 right-2 text-red-600 text-lg">
-      ✕
-    </button>
+    <button class="text-red-600 ml-3">Eliminar</button>
   `;
 
   // WhatsApp
   div.querySelector("button").onclick = () => {
-    const msg = `Venta total: $${v.total}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+
+    html2canvas(div).then(canvas => {
+
+      const img = canvas.toDataURL("image/png");
+
+      const link = document.createElement("a");
+      link.href = img;
+      link.download = "ticket.png";
+      link.click();
+
+      window.open(
+        `https://wa.me/?text=${encodeURIComponent("Venta total: $" + v.total)}`,
+        "_blank"
+      );
+    });
   };
 
-  // ELIMINAR
-  div.querySelector(".text-red-600").onclick = () => {
+  // eliminar venta
+  div.querySelector("button.text-red-600").onclick = () => {
 
     const ventas = data[usuarioActual].ventas;
 
-    const index = ventas.findIndex(x => x.fecha === v.fecha && x.total === v.total);
+    const i = ventas.indexOf(v);
 
-    if (index !== -1) {
-      ventas.splice(index, 1);
+    if (i !== -1) {
+      ventas.splice(i, 1);
       localStorage.setItem("dataPOS", JSON.stringify(data));
       renderHistorial();
       actualizarTotalDia();
@@ -315,72 +326,9 @@ function renderVenta(v) {
   listaVentas.prepend(div);
 }
 
-// ==============================
-// 📄 PDF
-// ==============================
-
-document.getElementById("btnPDF").onclick = () => {
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  const ventas = data[usuarioActual]?.ventas || [];
-
-  let y = 10;
-  let totalDia = 0;
-
-  doc.setFontSize(16);
-  doc.text("REPORTE DE VENTAS DEL DÍA", 10, y);
-  y += 10;
-
-  ventas.forEach((v, i) => {
-
-    doc.setFontSize(12);
-    doc.text(`VENTA ${i + 1} - ${v.fecha}`, 10, y);
-    y += 6;
-
-    v.items.forEach(it => {
-      doc.setFontSize(10);
-      doc.text(`• ${it.texto} = $${it.subtotal}`, 12, y);
-      y += 5;
-    });
-
-    doc.setFontSize(11);
-    doc.text(`SUBTOTAL: $${v.total}`, 10, y);
-    y += 10;
-
-    totalDia += v.total;
-  });
-
-  y += 5;
-
-  doc.setFontSize(14);
-  doc.text(`TOTAL DEL DÍA: $${totalDia}`, 10, y);
-
-  doc.save("reporte_ventas.pdf");
-};
 
 // ==============================
-// 🆕 NUEVA VENTA
-// ==============================
-
-document.getElementById("btnNuevaVenta").onclick = () => {
-  reset();
-  modal.showModal();
-};
-
-
-// ==============================
-// ❌ CERRAR
-// ==============================
-
-document.getElementById("btnCerrar").onclick = () => {
-  modal.close();
-};
-
-
-// ==============================
-// 📦 HISTORIAL
+// HISTORIAL
 // ==============================
 
 function renderHistorial() {
@@ -391,3 +339,61 @@ function renderHistorial() {
 
   ventas.forEach(renderVenta);
 }
+
+
+// ==============================
+// OPEN MODAL
+// ==============================
+
+document.getElementById("btnNuevaVenta").onclick = () => {
+  reset();
+  modal.showModal();
+};
+
+
+// ==============================
+// CLOSE MODAL
+// ==============================
+
+document.getElementById("btnCerrar").onclick = () => {
+  modal.close();
+};
+
+
+// ==============================
+// PDF
+// ==============================
+
+document.getElementById("btnPDF").onclick = () => {
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  const ventas = data[usuarioActual]?.ventas || [];
+
+  let y = 10;
+  let total = 0;
+
+  doc.text("REPORTE DE VENTAS", 10, y);
+  y += 10;
+
+  ventas.forEach((v, i) => {
+
+    doc.text(`Venta ${i + 1}`, 10, y);
+    y += 6;
+
+    v.items.forEach(it => {
+      doc.text(`${it.texto} - $${it.subtotal}`, 10, y);
+      y += 5;
+    });
+
+    doc.text(`Total: $${v.total}`, 10, y);
+    y += 10;
+
+    total += v.total;
+  });
+
+  doc.text(`TOTAL DEL DÍA: $${total}`, 10, y + 10);
+
+  doc.save("reporte.pdf");
+};
