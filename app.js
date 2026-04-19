@@ -344,42 +344,7 @@ function renderVenta(v) {
 
   listaVentas.prepend(div);
 }
-  // 📄 TICKET (MEJOR CALIDAD)
-  div.querySelector(".bg-blue-500").onclick = () => {
-
-    html2canvas(div, {
-      scale: 2,
-      backgroundColor: "#ffffff"
-    }).then(canvas => {
-
-      const img = canvas.toDataURL("image/png");
-
-      const link = document.createElement("a");
-      link.href = img;
-      link.download = `ticket-${v.usuario}-${Date.now()}.png`;
-      link.click();
-    });
-  };
-
-  // 🗑 eliminar
-  div.querySelector(".text-red-500").onclick = () => {
-
-    const arr = data[usuarioActual].ventas;
-
-    const i = arr.indexOf(v);
-
-    if (i !== -1) {
-      arr.splice(i, 1);
-      localStorage.setItem("dataPOS", JSON.stringify(data));
-      renderHistorial();
-      actualizarTotalDia();
-    }
-  };
-
-  listaVentas.prepend(div);
-}
-
-
+ 
 // ==============================
 // 📚 HISTORIAL
 // ==============================
