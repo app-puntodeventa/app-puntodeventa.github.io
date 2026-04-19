@@ -62,6 +62,17 @@ function init() {
 
   document.getElementById("userLabel").textContent = usuarioActual;
 
+const btnGlobal = document.getElementById("btnPDFGlobal");
+
+if (usuarioActual === "ADMIN") {
+  btnGlobal.style.display = "block";
+} else {
+  btnGlobal.style.display = "none";
+}
+
+
+  
+
   const user = localStorage.getItem("usuarioActivo");
 
   if (!user) {
@@ -474,7 +485,60 @@ document.getElementById("btnInstall").onclick = async () => {
 
 
 
+document.getElementById("btnPDFGlobal").onclick = () => {
 
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  let y = 10;
+  let totalGlobal = 0;
+
+  doc.setFontSize(18);
+  doc.text("REPORTE GLOBAL DE VENTAS", 10, y);
+  y += 10;
+
+  // recorrer todos los usuarios
+  Object.keys(data).forEach(usuario => {
+
+    const ventas = data[usuario].ventas || [];
+
+    if (!ventas.length) return;
+
+    doc.setFontSize(14);
+    doc.text(`Usuario: ${usuario}`, 10, y);
+    y += 8;
+
+    ventas.forEach((v, i) => {
+
+      doc.setFontSize(10);
+      doc.text(`Venta ${i + 1}`, 10, y);
+      y += 6;
+
+      v.items.forEach(it => {
+        doc.text(`- ${it.texto} = $${it.subtotal}`, 10, y);
+        y += 5;
+      });
+
+      doc.setFontSize(11);
+      doc.text(`Total: $${v.total}`, 10, y);
+      y += 8;
+
+      totalGlobal += v.total;
+
+      if (y > 270) {
+        doc.addPage();
+        y = 10;
+      }
+    });
+
+    y += 5;
+  });
+
+  doc.setFontSize(14);
+  doc.text(`TOTAL GLOBAL: $${totalGlobal}`, 10, y + 10);
+
+  doc.save("reporte-global.pdf");
+};
 
 
 
