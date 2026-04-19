@@ -237,9 +237,26 @@ function renderVenta(v) {
 
   div.className = "bg-yellow-100 p-4 rounded";
 
+  // 🔥 generar lista de productos
+  const itemsHTML = v.items.map(it => `
+    <div class="flex justify-between text-sm border-b py-1">
+      <span>${it.texto}</span>
+      <span>$${it.subtotal}</span>
+    </div>
+  `).join("");
+
   div.innerHTML = `
-    <div class="font-bold text-gray-700">🧾 ${v.usuario}</div>
-    <div>Total: $${v.total}</div>
+    <div class="font-bold text-gray-700 mb-1">🧾 ${v.usuario}</div>
+
+    <div class="text-xs text-gray-500 mb-2">${v.fecha}</div>
+
+    <div class="bg-white rounded p-2 mb-2">
+      ${itemsHTML}
+    </div>
+
+    <div class="font-bold text-right text-lg">
+      Total: $${v.total}
+    </div>
 
     <div class="flex gap-3 mt-2">
 
@@ -247,13 +264,47 @@ function renderVenta(v) {
         📄 Ticket
       </button>
 
-      <button class="text-red-500">
+      <button class="text-red-500 ml-auto">
         <i class="bi bi-trash"></i>
       </button>
 
     </div>
   `;
 
+  // 📄 TICKET (MEJOR CALIDAD)
+  div.querySelector(".bg-blue-500").onclick = () => {
+
+    html2canvas(div, {
+      scale: 2,
+      backgroundColor: "#ffffff"
+    }).then(canvas => {
+
+      const img = canvas.toDataURL("image/png");
+
+      const link = document.createElement("a");
+      link.href = img;
+      link.download = `ticket-${v.usuario}-${Date.now()}.png`;
+      link.click();
+    });
+  };
+
+  // 🗑 eliminar
+  div.querySelector(".text-red-500").onclick = () => {
+
+    const arr = data[usuarioActual].ventas;
+
+    const i = arr.indexOf(v);
+
+    if (i !== -1) {
+      arr.splice(i, 1);
+      localStorage.setItem("dataPOS", JSON.stringify(data));
+      renderHistorial();
+      actualizarTotalDia();
+    }
+  };
+
+  listaVentas.prepend(div);
+}
   // 📄 TICKET (MEJOR CALIDAD)
   div.querySelector(".bg-blue-500").onclick = () => {
 
