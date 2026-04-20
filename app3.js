@@ -10,28 +10,6 @@ function guardarInventario() {
 }
 
 
-document.getElementById("btnProducto").onclick = () => {
-
-  const nombre = prompt("Nombre del producto");
-  if (!nombre) return;
-
-  const precio = parseFloat(prompt("Precio"));
-  if (isNaN(precio)) return;
-
-  const stock = parseInt(prompt("Stock inicial")) || 0;
-
-  inventario.push({
-    nombre: nombre.toLowerCase(),
-    precio,
-    stock
-  });
-
-  guardarInventario();
-
-  alert("Producto agregado");
-};
-
-
 
 
 // ======================================
