@@ -271,7 +271,7 @@ function renderPreVenta() {
      <span>${escaparHTML(item.texto)}</span>
 
       <div class="flex gap-3 items-center">
-        <span>$${item.subtotal}</span>
+       <span>${item.nombre || item.texto}</span>
 
         <button class="text-red-500">
           <i class="bi bi-trash"></i>
@@ -767,18 +767,27 @@ function renderSelector() {
 
     div.onclick = () => {
 
-      if (p.stock <= 0) {
-        alert("Sin stock");
-        return;
-      }
+  if (p.stock <= 0) {
+    alert("Sin stock");
+    return;
+  }
 
-      ventaActual.push({
-        texto: p.nombre,
-        cantidad: 1,
-        precio: p.precio,
-        subtotal: p.precio
-      });
+  ventaActual.push({
+    productoId: inventario.indexOf(p),
+    nombre: p.nombre,
+    cantidad: 1,
+    precio: p.precio,
+    subtotal: p.precio
+  });
 
+  p.stock -= 1;
+  guardarInventario();
+
+  renderPreVenta();
+  actualizarTotalVenta();
+
+  modalSelector.close();
+};
       p.stock--;
 
       guardarInventario();
@@ -793,7 +802,7 @@ function renderSelector() {
 }
 
 
-document.getElementById("btnProductos").onclick = () => {
+document.getElementById("btnAbrirProductos").onclick = () => {
   renderSelector();
   modalSelector.showModal();
 };
