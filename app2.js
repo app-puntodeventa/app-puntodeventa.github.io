@@ -192,7 +192,7 @@ function renderPreVenta() {
 
 document.getElementById("btnFinalizar").onclick = () => {
 
-  if ((data[usuarioActual]?.ventas?.length || 0) >= 10) {
+  if ((data[usuarioActual]?.ventas?.length || 0) >= 5) {
   alert("Demo finalizada. Reinicia para seguir usando.");
   return;
 }
