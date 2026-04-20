@@ -1,3 +1,8 @@
+if (!Array.isArray(inventario)) {
+  inventario = [];
+}
+
+
 let inventario = JSON.parse(localStorage.getItem("inventario")) || [
   { nombre: "cuaderno", precio: 25, stock: 20 },
   { nombre: "lapiz", precio: 5, stock: 100 },
