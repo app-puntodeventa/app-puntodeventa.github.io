@@ -192,6 +192,12 @@ function renderPreVenta() {
 
 document.getElementById("btnFinalizar").onclick = () => {
 
+  if ((data[usuarioActual]?.ventas?.length || 0) >= 10) {
+  alert("Demo finalizada. Reinicia para seguir usando.");
+  return;
+}
+
+  
   if (!ventaActual.length) return;
 
   const venta = {
@@ -210,6 +216,7 @@ document.getElementById("btnFinalizar").onclick = () => {
   reset();
   modal.close();
   actualizarTotalDia();
+
 };
 
 
