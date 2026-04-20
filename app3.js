@@ -699,6 +699,105 @@ function exportarInventario() {
 
 
 
+function renderInventario() {
+
+  const cont = document.getElementById("listaInventario");
+  cont.innerHTML = "";
+
+  inventario.forEach((p, i) => {
+
+    const div = document.createElement("div");
+    div.className = "bg-gray-100 p-2 rounded";
+
+    div.innerHTML = `
+      <div class="font-bold">${p.nombre}</div>
+      <div class="text-sm">$${p.precio} | stock: ${p.stock}</div>
+    `;
+
+    cont.appendChild(div);
+  });
+}
+
+
+document.getElementById("btnInventario").onclick = () => {
+  renderInventario();
+  modalInventario.showModal();
+};
+
+
+
+document.getElementById("btnNuevoProducto").onclick = () => {
+  modalProducto.showModal();
+};
+
+document.getElementById("guardarProducto").onclick = () => {
+
+  const nombre = document.getElementById("prodNombre").value.toLowerCase();
+  const precio = parseFloat(document.getElementById("prodPrecio").value);
+  const stock = parseInt(document.getElementById("prodStock").value);
+
+  if (!nombre || isNaN(precio)) return;
+
+  inventario.push({ nombre, precio, stock });
+
+  guardarInventario();
+
+  modalProducto.close();
+  renderInventario();
+};
+
+
+
+
+function renderSelector() {
+
+  const cont = document.getElementById("listaSelector");
+  cont.innerHTML = "";
+
+  inventario.forEach(p => {
+
+    const div = document.createElement("div");
+
+    div.className = "flex justify-between bg-gray-100 p-2 rounded cursor-pointer";
+
+    div.innerHTML = `
+      <span>${p.nombre}</span>
+      <span>$${p.precio} | stock ${p.stock}</span>
+    `;
+
+    div.onclick = () => {
+
+      if (p.stock <= 0) {
+        alert("Sin stock");
+        return;
+      }
+
+      ventaActual.push({
+        texto: p.nombre,
+        cantidad: 1,
+        precio: p.precio,
+        subtotal: p.precio
+      });
+
+      p.stock--;
+
+      guardarInventario();
+      renderPreVenta();
+      actualizarTotalVenta();
+
+      modalSelector.close();
+    };
+
+    cont.appendChild(div);
+  });
+}
+
+
+document.getElementById("btnProductos").onclick = () => {
+  renderSelector();
+  modalSelector.showModal();
+};
+
 
 
 
