@@ -56,6 +56,11 @@ const VALID_PINS = {
 // 🎯 DOM
 // ======================================
 
+const modalSelector = document.getElementById("modalSelector");
+const modalInventario = document.getElementById("modalInventario");
+const modalProducto = document.getElementById("modalProducto");
+
+
 const modal = document.getElementById("modal");
 const input = document.getElementById("inputProducto");
 const preview = document.getElementById("preview");
@@ -748,7 +753,6 @@ document.getElementById("guardarProducto").onclick = () => {
 
 
 
-
 function renderSelector() {
 
   const cont = document.getElementById("listaSelector");
@@ -767,30 +771,23 @@ function renderSelector() {
 
     div.onclick = () => {
 
-  if (p.stock <= 0) {
-    alert("Sin stock");
-    return;
-  }
+      if (p.stock <= 0) {
+        alert("Sin stock");
+        return;
+      }
 
-  ventaActual.push({
-    productoId: inventario.indexOf(p),
-    nombre: p.nombre,
-    cantidad: 1,
-    precio: p.precio,
-    subtotal: p.precio
-  });
+      ventaActual.push({
+        productoId: inventario.indexOf(p),
+        nombre: p.nombre,
+        cantidad: 1,
+        precio: p.precio,
+        subtotal: p.precio
+      });
 
-  p.stock -= 1;
-  guardarInventario();
-
-  renderPreVenta();
-  actualizarTotalVenta();
-
-  modalSelector.close();
-};
-      p.stock--;
+      p.stock -= 1;
 
       guardarInventario();
+
       renderPreVenta();
       actualizarTotalVenta();
 
@@ -800,6 +797,7 @@ function renderSelector() {
     cont.appendChild(div);
   });
 }
+
 
 
 document.getElementById("btnAbrirProductos").onclick = () => {
