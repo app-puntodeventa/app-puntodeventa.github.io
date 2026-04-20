@@ -736,7 +736,7 @@ function renderSelector() {
   const cont = document.getElementById("listaSelector");
   cont.innerHTML = "";
 
-  inventario.forEach(p => {
+  inventario.forEach((p, index) => {
 
     const div = document.createElement("div");
 
@@ -755,7 +755,7 @@ function renderSelector() {
       }
 
       ventaActual.push({
-        productoId: inventario.indexOf(p),
+        productoId: index,
         nombre: p.nombre,
         cantidad: 1,
         precio: p.precio,
@@ -775,14 +775,4 @@ function renderSelector() {
     cont.appendChild(div);
   });
 }
-
-
-
-document.getElementById("btnAbrirProductos").onclick = () => {
-  renderSelector();
-  modalSelector.showModal();
-};
-
-
-
 
