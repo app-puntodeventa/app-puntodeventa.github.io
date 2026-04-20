@@ -1,3 +1,39 @@
+let inventario = JSON.parse(localStorage.getItem("inventario")) || [
+  { nombre: "cuaderno", precio: 25, stock: 20 },
+  { nombre: "lapiz", precio: 5, stock: 100 },
+  { nombre: "pluma", precio: 10, stock: 50 },
+  { nombre: "borrador", precio: 8, stock: 30 }
+];
+
+function guardarInventario() {
+  localStorage.setItem("inventario", JSON.stringify(inventario));
+}
+
+
+document.getElementById("btnProducto").onclick = () => {
+
+  const nombre = prompt("Nombre del producto");
+  if (!nombre) return;
+
+  const precio = parseFloat(prompt("Precio"));
+  if (isNaN(precio)) return;
+
+  const stock = parseInt(prompt("Stock inicial")) || 0;
+
+  inventario.push({
+    nombre: nombre.toLowerCase(),
+    precio,
+    stock
+  });
+
+  guardarInventario();
+
+  alert("Producto agregado");
+};
+
+
+
+
 // ======================================
 // 🔐 CONFIG / ESTADO GLOBAL
 // ======================================
@@ -163,7 +199,31 @@ function agregar() {
 
   const d = parsear(v);
 
-  const subtotal = d.multi ? d.cantidad * d.precio : d.precio;
+
+const nombre = d.texto.toLowerCase();
+
+// buscar producto en inventario
+const producto = inventario.find(p => nombre.includes(p.nombre));
+
+let subtotal = 0;
+
+if (producto) {
+
+  subtotal = d.cantidad * producto.precio;
+
+  // descontar stock
+  producto.stock -= d.cantidad;
+
+  if (producto.stock < 0) producto.stock = 0;
+
+  guardarInventario();
+
+} else {
+  subtotal = d.multi ? d.cantidad * d.precio : d.precio;
+}
+
+  
+  
 
   ventaActual.push({
     id: Date.now(),
@@ -611,6 +671,32 @@ function escaparHTML(texto) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
+
+function verInventario() {
+
+  let msg = "INVENTARIO:\n\n";
+
+  inventario.forEach(p => {
+    msg += `${p.nombre} | $${p.precio} | stock: ${p.stock}\n`;
+  });
+
+  alert(msg);
+}
+
+
+
+function exportarInventario() {
+
+  const blob = new Blob([JSON.stringify(inventario)], {
+    type: "application/json"
+  });
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "inventario.json";
+  a.click();
+}
+
 
 
 
