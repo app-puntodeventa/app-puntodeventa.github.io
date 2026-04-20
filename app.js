@@ -208,7 +208,7 @@ function renderPreVenta() {
     div.className = "flex justify-between bg-gray-100 p-2 rounded items-center";
 
     div.innerHTML = `
-      <span>${item.texto}</span>
+     <span>${escaparHTML(item.texto)}</span>
 
       <div class="flex gap-3 items-center">
         <span>$${item.subtotal}</span>
@@ -300,7 +300,7 @@ function renderVenta(v) {
 
   const itemsHTML = v.items.map(it => `
     <div class="flex justify-between text-sm border-b py-1">
-      <span>${it.texto}</span>
+      <span>${escaparHTML(it.texto)}</span>
       <span>$${it.subtotal}</span>
     </div>
   `).join("");
@@ -601,4 +601,19 @@ function checkInstallStatus() {
     document.getElementById("btnInstall").style.display = "none";
   }
 }
+
+
+function escaparHTML(texto) {
+  return texto
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+
+
+
+
 
