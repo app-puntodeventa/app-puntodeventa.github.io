@@ -323,6 +323,7 @@ producto = {
   nombre: nombre.trim(),
   stock: 0,
   costo: Number(d.precio) > 0 ? Number(d.precio) : 0,
+  unidad: "pieza",
   alias: [nombre]
 };
 
