@@ -8,11 +8,9 @@
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
 <link rel="manifest" href="manifest.json">
-
 <meta name="theme-color" content="#111827">
 
 </head>
@@ -33,10 +31,12 @@
   </a>
 
 </header>
+
 <button id="btnExportarExcel"
   class="bg-green-600 text-white px-3 py-2 rounded shadow">
   📊 Exportar Excel
 </button>
+
 <!-- CONTENIDO -->
 <div class="p-4 flex flex-col gap-4 flex-1">
 
@@ -45,34 +45,33 @@
 
     <input id="invNombre"
       class="border p-2 rounded"
-      placeholder="Producto (ej: huevo, lápiz)">
+      placeholder="Producto (ej: arroz, huevo)">
 
-<div class="flex gap-2">
+    <div class="flex gap-2">
 
-  <input id="invCantidad"
-    type="number"
-    class="border p-2 rounded w-1/3"
-    placeholder="Cantidad">
+      <input id="invCantidad"
+        type="number"
+        class="border p-2 rounded w-1/3"
+        placeholder="Cantidad">
 
-  <input id="invCosto"
-    type="number"
-    class="border p-2 rounded w-1/3"
-    placeholder="Costo">
+      <input id="invCosto"
+        type="number"
+        class="border p-2 rounded w-1/3"
+        placeholder="Costo">
 
-  <input id="invPrecio"
-    type="number"
-    class="border p-2 rounded w-1/3"
-    placeholder="Precio">
+      <input id="invPrecio"
+        type="number"
+        class="border p-2 rounded w-1/3"
+        placeholder="Precio">
 
-</div>
+    </div>
 
-<select id="invUnidad" class="border p-2 rounded w-full">
-  <option value="pieza">Pieza</option>
-  <option value="kg">Kilogramo (kg)</option>
-  <option value="g">Gramo (g)</option>
-  <option value="l">Litro (l)</option>
-</select>
-    
+    <select id="invUnidad" class="border p-2 rounded w-full">
+      <option value="pieza">Pieza</option>
+      <option value="kg">Kilogramo (kg)</option>
+      <option value="g">Gramo (g)</option>
+      <option value="l">Litro (l)</option>
+    </select>
 
     <button id="btnGuardar"
       class="bg-blue-600 text-white py-2 rounded">
@@ -82,64 +81,72 @@
   </div>
 
   <!-- LISTA -->
-
   <div class="bg-white rounded shadow overflow-x-auto">
 
-  <table class="w-full text-sm">
+    <table class="w-full text-sm">
 
-    <thead class="bg-gray-200 text-left">
-    <tr>
-  <th class="p-2">Producto</th>
-  <th class="p-2">Cantidad</th>
-  <th class="p-2">Unidad</th>
-  <th class="p-2">Costo</th>
-  <th class="p-2">Precio</th>
-  <th class="p-2 text-center">Acciones</th>
-</tr>
-    </thead>
+      <thead class="bg-gray-200 text-left">
+        <tr>
+          <th class="p-2">Producto</th>
+          <th class="p-2">Cantidad</th>
+          <th class="p-2">Unidad</th>
+          <th class="p-2">Costo</th>
+          <th class="p-2">Precio</th>
+          <th class="p-2 text-center">Acciones</th>
+        </tr>
+      </thead>
 
-    <tbody id="listaInventario"></tbody>
+      <tbody id="listaInventario"></tbody>
 
-  </table>
+    </table>
 
-</div>
+  </div>
 
 </div>
 
 <script>
-let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
 
+// =======================
+// 📦 DATA
+// =======================
+let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
 const lista = document.getElementById("listaInventario");
 
+// =======================
+// ➕ GUARDAR PRODUCTO
+// =======================
 document.getElementById("btnGuardar").onclick = () => {
 
- const nombre = document.getElementById("invNombre").value.toLowerCase().trim();
-const cantidad = Number(document.getElementById("invCantidad").value);
-const costo = Number(document.getElementById("invCosto").value);
-const precio = Number(document.getElementById("invPrecio").value);
-const unidad = document.getElementById("invUnidad").value;
+  const nombre = document.getElementById("invNombre").value.toLowerCase().trim();
+  const cantidad = Number(document.getElementById("invCantidad").value) || 0;
+  const costo = Number(document.getElementById("invCosto").value) || 0;
+  const precio = Number(document.getElementById("invPrecio").value) || 0;
+  const unidad = document.getElementById("invUnidad").value;
 
   if (!nombre) return alert("Escribe un producto");
 
   const existente = inventario.find(p =>
-  p.nombre.trim().toLowerCase() === nombre
-);
+    p.nombre.trim().toLowerCase() === nombre
+  );
 
- if (existente) {
-  existente.cantidad += cantidad;
+  if (existente) {
 
-  if (costo) existente.costo = costo;
-  if (precio) existente.precio = precio;
-  if (unidad) existente.unidad = unidad;
-} else {
-   inventario.push({
-  nombre,
-  cantidad,
-  costo,
-  precio,
-  unidad,
-  alias: []
-});
+    existente.cantidad += cantidad;
+
+    if (costo) existente.costo = costo;
+    if (precio) existente.precio = precio;
+    if (unidad) existente.unidad = unidad;
+
+  } else {
+
+    inventario.push({
+      nombre,
+      cantidad,
+      costo: costo || null,
+      precio: precio || 0,
+      unidad: unidad || "pieza",
+      alias: []
+    });
   }
 
   guardar();
@@ -155,31 +162,20 @@ function guardar() {
 }
 
 // =======================
-// 🧹 LIMPIAR FORM
+// 🧹 LIMPIAR
 // =======================
 function limpiar() {
   document.getElementById("invNombre").value = "";
   document.getElementById("invCantidad").value = "";
   document.getElementById("invCosto").value = "";
-document.getElementById("invPrecio").value = "";
-document.getElementById("invUnidad").value = "pieza";
-  
-}
-
-// =======================
-// 🎨 COLOR POR STOCK
-// =======================
-function colorStock(cantidad) {
-  if (cantidad <= 0) return "bg-red-200";
-  if (cantidad < 5) return "bg-yellow-200";
-  return "bg-green-100";
+  document.getElementById("invPrecio").value = "";
+  document.getElementById("invUnidad").value = "pieza";
 }
 
 // =======================
 // 🧾 RENDER
 // =======================
-
-  function render() {
+function render() {
 
   lista.innerHTML = "";
 
@@ -187,7 +183,6 @@ function colorStock(cantidad) {
 
     const tr = document.createElement("tr");
 
-    // color por stock
     let color = "";
     if (p.cantidad <= 0) color = "bg-red-100";
     else if (p.cantidad < 5) color = "bg-yellow-100";
@@ -195,73 +190,56 @@ function colorStock(cantidad) {
     tr.className = color;
 
     tr.innerHTML = `
-  <td class="p-2">
-    <input value="${p.nombre}"
-      class="w-full border p-1 rounded bg-transparent">
-  </td>
+      <td class="p-2"><input value="${p.nombre}" class="w-full border p-1 rounded"></td>
+      <td class="p-2"><input type="number" value="${p.cantidad}" class="w-20 border p-1 rounded"></td>
+      <td class="p-2">
+        <select class="border p-1 rounded">
+          <option value="pieza" ${p.unidad === "pieza" ? "selected" : ""}>pieza</option>
+          <option value="kg" ${p.unidad === "kg" ? "selected" : ""}>kg</option>
+          <option value="g" ${p.unidad === "g" ? "selected" : ""}>g</option>
+          <option value="l" ${p.unidad === "l" ? "selected" : ""}>l</option>
+        </select>
+      </td>
+      <td class="p-2"><input type="number" value="${p.costo || 0}" class="w-20 border p-1 rounded"></td>
+      <td class="p-2"><input type="number" value="${p.precio || 0}" class="w-20 border p-1 rounded"></td>
+      <td class="p-2 text-center">
+        <button class="text-red-500"><i class="bi bi-trash"></i></button>
+      </td>
+    `;
 
-  <td class="p-2">
-    <input type="number" value="${p.cantidad}"
-      class="w-20 border p-1 rounded">
-  </td>
+    const inputs = tr.querySelectorAll("input");
 
-  <td class="p-2">
-    <select class="border p-1 rounded">
-      <option value="pieza" ${p.unidad === "pieza" ? "selected" : ""}>pieza</option>
-      <option value="kg" ${p.unidad === "kg" ? "selected" : ""}>kg</option>
-      <option value="g" ${p.unidad === "g" ? "selected" : ""}>g</option>
-      <option value="l" ${p.unidad === "l" ? "selected" : ""}>l</option>
-    </select>
-  </td>
-
-  <td class="p-2">
-    <input type="number" value="${p.costo || 0}"
-      class="w-20 border p-1 rounded">
-  </td>
-
-  <td class="p-2">
-    <input type="number" value="${p.precio || 0}"
-      class="w-20 border p-1 rounded">
-  </td>
-
-  <td class="p-2 text-center">
-    <button class="text-red-500">
-      <i class="bi bi-trash"></i>
-    </button>
-  </td>
-`;
-    // ✏️ editar nombre
-    tr.querySelectorAll("input")[0].onchange = (e) => {
+    // nombre
+    inputs[0].onchange = e => {
       p.nombre = e.target.value.toLowerCase();
       guardar();
     };
 
-    // ✏️ editar cantidad
-    tr.querySelectorAll("input")[1].onchange = (e) => {
+    // cantidad
+    inputs[1].onchange = e => {
       p.cantidad = Number(e.target.value);
       guardar();
     };
 
-    // ✏️ editar costo
-    tr.querySelectorAll("input")[2].onchange = (e) => {
+    // costo
+    inputs[2].onchange = e => {
       p.costo = Number(e.target.value);
       guardar();
     };
 
-// 🧠 guardar unidad
-tr.querySelector("select").onchange = (e) => {
-  p.unidad = e.target.value;
-  guardar();
-};
+    // precio
+    inputs[3].onchange = e => {
+      p.precio = Number(e.target.value);
+      guardar();
+    };
 
-// 💰 guardar precio
-tr.querySelectorAll("input")[3].onchange = (e) => {
-  p.precio = Number(e.target.value);
-  guardar();
-};
-    
+    // unidad
+    tr.querySelector("select").onchange = e => {
+      p.unidad = e.target.value;
+      guardar();
+    };
 
-    // 🗑 eliminar
+    // eliminar
     tr.querySelector("button").onclick = () => {
       if (!confirm("¿Eliminar producto?")) return;
       inventario.splice(i, 1);
@@ -275,13 +253,17 @@ tr.querySelectorAll("input")[3].onchange = (e) => {
 
 render();
 
-
+// =======================
+// 📊 EXPORTAR EXCEL
+// =======================
 document.getElementById("btnExportarExcel").onclick = () => {
 
   const dataExcel = inventario.map(p => ({
     Producto: p.nombre,
-    Stock: p.cantidad,
+    Cantidad: p.cantidad,
+    Unidad: p.unidad,
     Costo: p.costo,
+    Precio: p.precio,
     Alias: (p.alias || []).join(", ")
   }));
 
@@ -293,8 +275,6 @@ document.getElementById("btnExportarExcel").onclick = () => {
   XLSX.writeFile(wb, "inventario.xlsx");
 };
 
-
-  
 </script>
 
 </body>
