@@ -21,7 +21,8 @@ let totalVenta = 0;
 
 let data = JSON.parse(localStorage.getItem("dataPOS")) || {};
 
-let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
+let inventario = (JSON.parse(localStorage.getItem("inventarioPOS")) || [])
+  .map(normalizarProducto);
 
 let inventario = (JSON.parse(localStorage.getItem("inventarioPOS")) || [])
   .map(normalizarProducto);
@@ -353,6 +354,10 @@ const nombre = extraerNombre(d.texto);
 
 let producto = buscarProducto(nombre);
 
+  if (producto && producto.precioVenta) {
+  d.precioUnitario = producto.precioVenta;
+}
+  
 // 🧠 si no existe, se crea automáticamente desde la venta
 
   if (!producto) {
