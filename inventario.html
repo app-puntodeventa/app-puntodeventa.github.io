@@ -219,6 +219,27 @@ function colorStock(cantidad) {
 }
 
 render();
+
+
+document.getElementById("btnExportarExcel").onclick = () => {
+
+  const dataExcel = inventario.map(p => ({
+    Producto: p.nombre,
+    Stock: p.cantidad,
+    Costo: p.costo,
+    Alias: (p.alias || []).join(", ")
+  }));
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(dataExcel);
+
+  XLSX.utils.book_append_sheet(wb, ws, "Inventario");
+
+  XLSX.writeFile(wb, "inventario.xlsx");
+};
+
+
+  
 </script>
 
 </body>
