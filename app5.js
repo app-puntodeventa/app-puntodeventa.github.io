@@ -96,6 +96,8 @@ document.getElementById("btnLogin").onclick = () => {
 
 function init() {
 
+  renderProductosRapidos();
+
   checkInstallStatus();
 
   const user = localStorage.getItem("usuarioActivo");
@@ -416,6 +418,8 @@ inventario = inventario.map(p => ({
 }));
 
 localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
+
+  renderProductosRapidos();
   
 const unidades = d.cantidad;
 
@@ -921,4 +925,58 @@ function actualizarGanancias() {
   if (elVentas) elVentas.textContent = ventasCount;
 }
 
+
+function renderProductosRapidos() {
+
+  const panel = document.getElementById("panelProductos");
+  if (!panel) return;
+
+  panel.innerHTML = "";
+
+  inventario.slice(0, 20).forEach(p => {
+
+    const btn = document.createElement("button");
+
+    btn.className = "bg-white border rounded p-2 text-left shadow";
+
+    btn.innerHTML = `
+      <div class="font-bold">${p.nombre}</div>
+      <div class="text-sm text-gray-500">$${p.precioVenta || 0}</div>
+    `;
+
+    btn.onclick = () => agregarRapido(p);
+
+    panel.appendChild(btn);
+  });
+}
+
+
+function agregarRapido(producto) {
+
+  const cantidad = 1;
+
+  const precio = producto.precioVenta || 0;
+
+  const subtotal = cantidad * precio;
+
+  ventaActual.push({
+    id: Date.now(),
+    usuario: usuarioActual,
+    texto: `${cantidad} ${producto.unidad} ${producto.nombre}`,
+    cantidad,
+    unidad: producto.unidad,
+    precio,
+    multi: true,
+    subtotal,
+    costoUnitario: producto.costo || 0,
+    ganancia: 0
+  });
+
+  totalVenta += subtotal;
+
+  actualizarTotalVenta();
+  renderPreVenta();
+
+  navigator.vibrate?.(30);
+}
 
