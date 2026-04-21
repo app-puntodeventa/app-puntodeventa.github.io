@@ -333,7 +333,7 @@ producto = {
   nombre: nombre.trim(),
   stock: 0,
   unidad: d.unidad,
-  Precio: null,
+  costo: null,
   precioVenta: d.precioUnitario,
   alias: [nombre],
   creadoDesdeVenta: true
@@ -411,7 +411,7 @@ if (producto.precioVenta && producto.precioVenta !== d.precioUnitario) {
 inventario = inventario.map(p => ({
   nombre: p.nombre,
   stock: Number(p.stock || 0),
-  Precio: p.costo !== null ? Number(p.costo) : null,
+  costo: p.costo !== null ? Number(p.costo) : null,
   precioVenta: p.precioVenta !== null ? Number(p.precioVenta) : null,
   unidad: p.unidad || "pieza",
   alias: p.alias || []
@@ -959,6 +959,19 @@ function agregarRapido(producto) {
 
   const subtotal = cantidad * precio;
 
+
+// descontar stock
+if (typeof producto.stock !== "number") {
+  producto.stock = 0;
+}
+
+producto.stock -= 1;
+
+if (producto.stock < 0) producto.stock = 0;
+
+// guardar inventario
+localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
+  
   ventaActual.push({
     id: Date.now(),
     usuario: usuarioActual,
