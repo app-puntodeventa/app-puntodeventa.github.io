@@ -306,7 +306,7 @@ function agregar() {
 
   const subtotal = d.modoLote ? d.cantidad * d.precioUnitario : d.precioUnitario;
 
-  // Si no existe, crear automáticamente
+  // Si no existe, crear automáticamente (✅ ALIMENTA INVENTARIO)
   if (!producto) {
     producto = {
       id: Date.now(),
@@ -397,7 +397,7 @@ function renderPreVenta() {
     div.innerHTML = `
       <span>${escaparHTML(item.texto)}</span>
       <div class="flex gap-3 items-center">
-        <span>$${item.subtotal}</span>
+        <span>$${item.subtotal.toFixed(2)}</span>
         <button class="text-red-500">
           <i class="bi bi-trash"></i>
         </button>
@@ -416,27 +416,57 @@ function renderPreVenta() {
 }
 
 // ======================================
-// 💰 FINALIZAR VENTA
+// 💰 FINALIZAR VENTA - ✅ CORREGIDO
 // ======================================
 
 document.getElementById("btnFinalizar").onclick = () => {
-  if (!ventaActual.length) return;
+  console.log("btnFinalizar clicked"); // Debug
+  console.log("ventaActual:", ventaActual); // Debug
 
+  if (!ventaActual || ventaActual.length === 0) {
+    alert("No hay productos en la venta");
+    return;
+  }
+
+  if (!usuarioActual) {
+    alert("No hay usuario activo");
+    return;
+  }
+
+  // Crear objeto de venta
   const venta = {
-    items: ventaActual,
+    items: JSON.parse(JSON.stringify(ventaActual)), // Copia profunda
     total: totalVenta,
     usuario: usuarioActual,
     fecha: new Date().toLocaleString()
   };
 
+  console.log("Venta a guardar:", venta); // Debug
+
+  // Asegurar que el usuario existe en data
+  if (!data[usuarioActual]) {
+    data[usuarioActual] = { ventas: [] };
+  }
+
+  // Guardar venta
   data[usuarioActual].ventas.push(venta);
   localStorage.setItem("dataPOS", JSON.stringify(data));
 
+  console.log("Venta guardada en localStorage"); // Debug
+
+  // Renderizar la tarjeta
   renderVenta(venta);
+
+  // Limpiar y cerrar
   reset();
   modal.close();
+
+  // Actualizar totales
   actualizarTotalDia();
   actualizarGanancias();
+  renderHistorial();
+
+  alert("✅ Venta guardada correctamente");
 };
 
 // ======================================
@@ -444,13 +474,23 @@ document.getElementById("btnFinalizar").onclick = () => {
 // ======================================
 
 function actualizarTotalVenta() {
-  totalVentaSpan.textContent = "$" + totalVenta.toFixed(2);
+  if (totalVentaSpan) {
+    totalVentaSpan.textContent = "$" + totalVenta.toFixed(2);
+  }
 }
 
 function actualizarTotalDia() {
-  const ventas = data[usuarioActual]?.ventas || [];
-  const total = ventas.reduce((acc, v) => acc + v.total, 0);
-  totalDiaSpan.textContent = "$" + total.toFixed(2);
+  if (!usuarioActual || !data[usuarioActual]) {
+    if (totalDiaSpan) totalDiaSpan.textContent = "$0.00";
+    return;
+  }
+
+  const ventas = data[usuarioActual].ventas || [];
+  const total = ventas.reduce((acc, v) => acc + (v.total || 0), 0);
+  
+  if (totalDiaSpan) {
+    totalDiaSpan.textContent = "$" + total.toFixed(2);
+  }
 }
 
 // ======================================
@@ -477,7 +517,7 @@ function renderVenta(v) {
       it => `
     <div class="flex justify-between text-sm border-b py-1">
       <span>${escaparHTML(it.texto)}</span>
-      <span>$${it.subtotal}</span>
+      <span>$${(it.subtotal || 0).toFixed(2)}</span>
     </div>
   `
     )
@@ -487,35 +527,44 @@ function renderVenta(v) {
     <div class="font-bold text-gray-700 mb-1">🧾 ${escaparHTML(v.usuario)}</div>
     <div class="text-xs text-gray-500 mb-2">${escaparHTML(v.fecha)}</div>
     <div class="bg-white rounded p-2 mb-2">${itemsHTML}</div>
-    <div class="font-bold text-right text-lg">Total: $${v.total.toFixed(2)}</div>
+    <div class="font-bold text-right text-lg">Total: $${(v.total || 0).toFixed(2)}</div>
     <div class="flex gap-3 mt-2">
-      <button class="bg-blue-500 text-white px-3 py-1 rounded">📄 Ticket</button>
+      <button class="bg-blue-500 text-white px-3 py-1 rounded text-sm">📄 Ticket</button>
       <button class="text-red-500 ml-auto"><i class="bi bi-trash"></i></button>
     </div>
   `;
 
   // Descargar ticket como imagen
-  div.querySelector(".bg-blue-500").onclick = () => {
-    html2canvas(div, { scale: 2, backgroundColor: "#fff" }).then(canvas => {
-      const link = document.createElement("a");
-      link.href = canvas.toDataURL("image/png");
-      link.download = `ticket-${usuarioActual}-${Date.now()}.png`;
-      link.click();
-    });
-  };
+  const btnTicket = div.querySelector(".bg-blue-500");
+  if (btnTicket && typeof html2canvas !== "undefined") {
+    btnTicket.onclick = () => {
+      html2canvas(div, { scale: 2, backgroundColor: "#fff" }).then(canvas => {
+        const link = document.createElement("a");
+        link.href = canvas.toDataURL("image/png");
+        link.download = `ticket-${usuarioActual}-${Date.now()}.png`;
+        link.click();
+      }).catch(err => console.error("Error al descargar ticket:", err));
+    };
+  }
 
   // Eliminar venta
-  div.querySelector(".text-red-500").onclick = () => {
-    const arr = data[usuarioActual]?.ventas || [];
-    const idx = arr.indexOf(v);
-    if (idx !== -1) {
-      arr.splice(idx, 1);
-      localStorage.setItem("dataPOS", JSON.stringify(data));
-      renderHistorial();
-      actualizarTotalDia();
-      actualizarGanancias();
-    }
-  };
+  const btnEliminar = div.querySelector(".text-red-500");
+  if (btnEliminar) {
+    btnEliminar.onclick = () => {
+      if (!data[usuarioActual]) return;
+      
+      const arr = data[usuarioActual].ventas || [];
+      const idx = arr.indexOf(v);
+      
+      if (idx !== -1) {
+        arr.splice(idx, 1);
+        localStorage.setItem("dataPOS", JSON.stringify(data));
+        div.remove();
+        actualizarTotalDia();
+        actualizarGanancias();
+      }
+    };
+  }
 
   listaVentas.prepend(div);
 }
@@ -525,8 +574,22 @@ function renderVenta(v) {
 // ======================================
 
 function renderHistorial() {
+  if (!listaVentas) return;
+
   listaVentas.innerHTML = "";
-  const ventas = data[usuarioActual]?.ventas || [];
+  
+  if (!usuarioActual || !data[usuarioActual]) {
+    listaVentas.innerHTML = '<p class="p-4 text-gray-500">Sin ventas</p>';
+    return;
+  }
+
+  const ventas = data[usuarioActual].ventas || [];
+  
+  if (ventas.length === 0) {
+    listaVentas.innerHTML = '<p class="p-4 text-gray-500">Sin ventas</p>';
+    return;
+  }
+
   ventas.forEach(renderVenta);
   actualizarTotalDia();
 }
@@ -538,6 +601,7 @@ function renderHistorial() {
 document.getElementById("btnNuevaVenta").onclick = () => {
   reset();
   modal.showModal();
+  input.focus();
 };
 
 // ======================================
@@ -553,10 +617,20 @@ document.getElementById("btnCerrar").onclick = () => {
 // ======================================
 
 document.getElementById("btnPDF").onclick = () => {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
+  if (typeof jsPDF === "undefined") {
+    alert("Error: jsPDF no está cargado");
+    return;
+  }
 
-  const ventas = data[usuarioActual]?.ventas || [];
+  const { jsPDF: jsPDFClass } = window.jspdf;
+  const doc = new jsPDFClass();
+
+  if (!data[usuarioActual]) {
+    alert("No hay datos para generar PDF");
+    return;
+  }
+
+  const ventas = data[usuarioActual].ventas || [];
   let y = 10;
   let total = 0;
 
@@ -578,18 +652,18 @@ document.getElementById("btnPDF").onclick = () => {
 
     doc.setFontSize(10);
     v.items.forEach(it => {
-      doc.text(`• ${it.texto} = $${it.subtotal.toFixed(2)}`, 10, y);
+      doc.text(`• ${it.texto} = $${(it.subtotal || 0).toFixed(2)}`, 10, y);
       y += 5;
     });
 
     doc.setFontSize(11);
-    doc.text(`Total: $${v.total.toFixed(2)}`, 10, y);
+    doc.text(`Total: $${(v.total || 0).toFixed(2)}`, 10, y);
     y += 8;
 
     doc.line(10, y, 200, y);
     y += 6;
 
-    total += v.total;
+    total += v.total || 0;
 
     if (y > 270) {
       doc.addPage();
@@ -604,8 +678,13 @@ document.getElementById("btnPDF").onclick = () => {
 };
 
 document.getElementById("btnPDFGlobal").onclick = () => {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
+  if (typeof jsPDF === "undefined") {
+    alert("Error: jsPDF no está cargado");
+    return;
+  }
+
+  const { jsPDF: jsPDFClass } = window.jspdf;
+  const doc = new jsPDFClass();
 
   let y = 10;
   let totalGlobal = 0;
@@ -628,15 +707,15 @@ document.getElementById("btnPDFGlobal").onclick = () => {
       y += 6;
 
       v.items.forEach(it => {
-        doc.text(`- ${it.texto} = $${it.subtotal.toFixed(2)}`, 10, y);
+        doc.text(`- ${it.texto} = $${(it.subtotal || 0).toFixed(2)}`, 10, y);
         y += 5;
       });
 
       doc.setFontSize(11);
-      doc.text(`Total: $${v.total.toFixed(2)}`, 10, y);
+      doc.text(`Total: $${(v.total || 0).toFixed(2)}`, 10, y);
       y += 8;
 
-      totalGlobal += v.total;
+      totalGlobal += v.total || 0;
 
       if (y > 270) {
         doc.addPage();
@@ -670,14 +749,18 @@ document.getElementById("btnLogout").onclick = () => {
 function actualizarGanancias() {
   if (usuarioActual !== "ADMIN") return;
 
-  const ventas = data[usuarioActual]?.ventas || [];
+  if (!data[usuarioActual]) {
+    return;
+  }
+
+  const ventas = data[usuarioActual].ventas || [];
 
   let ingresos = 0;
   let ganancia = 0;
 
   ventas.forEach(v => {
-    ingresos += v.total;
-    v.items.forEach(i => {
+    ingresos += v.total || 0;
+    (v.items || []).forEach(i => {
       if (i.ganancia && i.ganancia > 0) {
         ganancia += i.ganancia;
       }
@@ -705,16 +788,26 @@ function renderProductosRapidos() {
 
   panel.innerHTML = "";
 
+  if (!inventario || inventario.length === 0) {
+    panel.innerHTML = '<p class="text-gray-400 text-xs col-span-2">Sin productos</p>';
+    return;
+  }
+
   inventario.slice(0, 20).forEach(p => {
     const btn = document.createElement("button");
-    btn.className = "bg-white border rounded p-2 text-left shadow hover:bg-gray-50";
+    btn.className = "bg-white border rounded p-2 text-left shadow hover:bg-gray-50 transition";
+    btn.type = "button";
 
     btn.innerHTML = `
-      <div class="font-bold">${escaparHTML(p.nombre)}</div>
-      <div class="text-sm text-gray-500">$${(p.precioVenta || 0).toFixed(2)}</div>
+      <div class="font-bold text-sm">${escaparHTML(p.nombre)}</div>
+      <div class="text-xs text-gray-500">$${(p.precioVenta || 0).toFixed(2)}</div>
     `;
 
-    btn.onclick = () => agregarRapido(p);
+    btn.onclick = (e) => {
+      e.preventDefault();
+      agregarRapido(p);
+    };
+
     panel.appendChild(btn);
   });
 }
@@ -734,9 +827,9 @@ function agregarRapido(producto) {
   ventaActual.push({
     id: Date.now(),
     usuario: usuarioActual,
-    texto: `${cantidad} ${producto.unidad} ${producto.nombre}`,
+    texto: `${cantidad} ${producto.unidad || "pieza"} ${producto.nombre}`,
     cantidad,
-    unidad: producto.unidad,
+    unidad: producto.unidad || "pieza",
     precio,
     multi: true,
     subtotal,
@@ -768,26 +861,31 @@ let deferredPrompt;
 window.addEventListener("beforeinstallprompt", e => {
   e.preventDefault();
   deferredPrompt = e;
-  document.getElementById("btnInstall").style.display = "block";
+  const btnInstall = document.getElementById("btnInstall");
+  if (btnInstall) btnInstall.style.display = "block";
 });
 
 window.addEventListener("appinstalled", () => {
   console.log("✓ PWA instalada");
-  document.getElementById("btnInstall").style.display = "none";
+  const btnInstall = document.getElementById("btnInstall");
+  if (btnInstall) btnInstall.style.display = "none";
 });
 
-document.getElementById("btnInstall").onclick = async () => {
-  if (!deferredPrompt) return;
+const btnInstall = document.getElementById("btnInstall");
+if (btnInstall) {
+  btnInstall.onclick = async () => {
+    if (!deferredPrompt) return;
 
-  deferredPrompt.prompt();
-  const result = await deferredPrompt.userChoice;
+    deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
 
-  if (result.outcome === "accepted") {
-    console.log("✓ Instalada correctamente");
-  }
+    if (result.outcome === "accepted") {
+      console.log("✓ Instalada correctamente");
+    }
 
-  deferredPrompt = null;
-};
+    deferredPrompt = null;
+  };
+}
 
 function checkInstallStatus() {
   const isStandalone =
@@ -795,7 +893,8 @@ function checkInstallStatus() {
     window.navigator.standalone === true;
 
   if (isStandalone) {
-    document.getElementById("btnInstall").style.display = "none";
+    const btnInstall = document.getElementById("btnInstall");
+    if (btnInstall) btnInstall.style.display = "none";
   }
 }
 
@@ -806,12 +905,14 @@ function checkInstallStatus() {
 const pinInput = document.getElementById("pinInput");
 const togglePin = document.getElementById("togglePin");
 
-let visible = false;
+if (pinInput && togglePin) {
+  let visible = false;
 
-if (togglePin) {
   togglePin.onclick = () => {
     visible = !visible;
     pinInput.type = visible ? "text" : "password";
-    togglePin.innerHTML = visible ? '<i class="bi bi-eye-slash"></i>' : '<i class="bi bi-eye"></i>';
+    togglePin.innerHTML = visible 
+      ? '<i class="bi bi-eye-slash"></i>' 
+      : '<i class="bi bi-eye"></i>';
   };
 }
