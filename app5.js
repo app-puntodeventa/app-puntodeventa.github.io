@@ -246,6 +246,13 @@ let producto = inventario.find(p =>
   p.alias?.some(a => nombre.includes(a))
 );
 
+let costoBase = 0;
+
+if (producto && producto.costo) {
+  costoBase = producto.costo;
+}
+  
+
 if (!producto) {
 
   producto = {
@@ -275,12 +282,16 @@ if (!producto) {
 
 localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
   
-  ventaActual.push({
-    id: Date.now(),
-    usuario: usuarioActual,
-    ...d,
-    subtotal
-  });
+const gananciaEstimada = subtotal - (costoBase * (d.multi ? d.cantidad : 1));
+
+ventaActual.push({
+  id: Date.now(),
+  usuario: usuarioActual,
+  ...d,
+  subtotal,
+  costo: costoBase,
+  ganancia: gananciaEstimada
+});
 
   totalVenta += subtotal;
 
