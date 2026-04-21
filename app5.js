@@ -64,20 +64,7 @@ document.getElementById("btnLogin").onclick = () => {
 
 function init() {
 
-checkInstallStatus();
-
-  document.getElementById("userLabel").textContent = usuarioActual;
-
-const btnGlobal = document.getElementById("btnPDFGlobal");
-
-if (usuarioActual === "ADMIN") {
-  btnGlobal.style.display = "block";
-} else {
-  btnGlobal.style.display = "none";
-}
-
-
-  
+  checkInstallStatus();
 
   const user = localStorage.getItem("usuarioActivo");
 
@@ -88,10 +75,20 @@ if (usuarioActual === "ADMIN") {
 
   usuarioActual = user;
 
+  // 👇 ocultar login correctamente
+  document.getElementById("loginScreen").style.display = "none";
+
+  document.getElementById("userLabel").textContent = usuarioActual;
+
+  const btnGlobal = document.getElementById("btnPDFGlobal");
+
+  if (btnGlobal) {
+    btnGlobal.style.display = usuarioActual === "ADMIN" ? "block" : "none";
+  }
+
   renderHistorial();
   actualizarTotalDia();
-actualizarSugerencias();
-  
+  actualizarSugerencias();
 }
 
 function actualizarSugerencias() {
@@ -160,7 +157,8 @@ function extraerNombre(texto) {
   return texto
     .toLowerCase()
     .replace(/\d+/g, "")
-    .replace(/kilos?|kg|pieza?s?|pzas?|de|a|x|cada|uno|por|pesos?/g, "")
+    .replace(/\b(kilos?|kg|pieza?s?|pzas?|de|a|x|cada|uno|por|pesos?)\b/g, "")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
