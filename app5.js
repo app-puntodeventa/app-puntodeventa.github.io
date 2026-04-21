@@ -324,19 +324,20 @@ const nombre = extraerNombre(d.texto);
 let producto = buscarProducto(nombre);
 
 // 🧠 si no existe, se crea automáticamente desde la venta
-if (!producto) {
+
+  if (!producto) {
 
 producto = {
   nombre: nombre.trim(),
   stock: 0,
-  unidad: unidadDetectada(nombre),
+  unidad: d.unidad,
   costo: null,
-  precioVenta: null,
+  precioVenta: d.precio,
   alias: [nombre],
   creadoDesdeVenta: true
 };
 
-  inventario.push(producto);
+inventario.push(producto);
 
 } else {
 
