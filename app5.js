@@ -372,12 +372,7 @@ if (typeof producto.stock !== "number") {
   producto.stock = 0;
 }
 
-// 📉 descontar inventario correctamente
-if (d.unidad === "kg") {
-  producto.stock -= d.cantidad; // stock en kg
-} else {
-  producto.stock -= d.cantidad; // piezas igual
-}
+
 
 // 🚫 evitar negativos
 if (producto.stock < 0) {
