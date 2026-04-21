@@ -309,13 +309,14 @@ if (!producto) {
 
   const nombreNormalizado = normalizar(nombre);
 
-  producto = {
-    nombre: nombre.trim(),
-    cantidad: d.cantidad,
-    costo: d.precio || 0,
-    alias: [nombre]
-  };
+producto = {
+  nombre: nombre.trim(),
+  stock: 0,
+  costo: d.precio || 0,
+  alias: [nombre]
+};
 
+  
   inventario.push(producto);
 } else {
 
@@ -325,7 +326,7 @@ if (!producto) {
   }
 
   // 🔻 restar inventario por venta
-  producto.cantidad -= d.cantidad;
+  producto.stock = (producto.stock || 0) - d.cantidad;
 
   // 🚫 evitar inventario negativo extremo
   if (producto.cantidad < -100) {
