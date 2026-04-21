@@ -302,8 +302,8 @@ let producto = buscarProducto(nombre);
 
 let costoBase = 0;
 
-if (producto && producto.costo !== undefined && producto.costo !== null) {
-  costoBase = Number(producto.costo);
+if (producto && producto.costo != null) {
+  costoBase = Number(producto.costo) || 0;
 }
   
 
