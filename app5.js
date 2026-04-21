@@ -119,6 +119,16 @@ function init() {
   renderHistorial();
   actualizarTotalDia();
   actualizarSugerencias();
+
+  const panel = document.getElementById("panelGanancias");
+
+if (panel) {
+  panel.style.display = usuarioActual === "ADMIN" ? "block" : "none";
+}
+
+actualizarGanancias();
+
+  
 }
 
 function actualizarSugerencias() {
@@ -799,6 +809,36 @@ function escaparHTML(texto) {
 }
 
 
+function actualizarGanancias() {
 
+  if (usuarioActual !== "ADMIN") return;
+
+  const ventas = data[usuarioActual]?.ventas || [];
+
+  let ingresos = 0;
+  let ganancia = 0;
+
+  ventas.forEach(v => {
+
+    ingresos += v.total;
+
+    v.items.forEach(i => {
+      if (i.ganancia) {
+        ganancia += i.ganancia;
+      }
+    });
+
+  });
+
+  const ventasCount = ventas.length;
+
+  const elIngresos = document.getElementById("gananciaIngresos");
+  const elGanancia = document.getElementById("gananciaTotal");
+  const elVentas = document.getElementById("gananciaVentas");
+
+  if (elIngresos) elIngresos.textContent = `$${ingresos}`;
+  if (elGanancia) elGanancia.textContent = `$${ganancia}`;
+  if (elVentas) elVentas.textContent = ventasCount;
+}
 
 
