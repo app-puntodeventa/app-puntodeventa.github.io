@@ -167,9 +167,16 @@ if (t.includes("kg") || t.includes("kilo") || t.includes("kilos")) {
 }
 
 if (t.includes("gr") || t.includes("gramo") || t.includes("gramos")) {
-  unidad = "gr";
+  unidad = "kg"; // 👈 todo se convierte a kg
 }
 
+// 🔄 normalizar gramos a kg
+if (unidad === "kg" && t.includes("gr")) {
+  if (nums.length > 0) {
+    cantidad = nums[0] / 1000;
+  }
+}
+  
 if (t.includes("lt") || t.includes("litro") || t.includes("litros")) {
   unidad = "lt";
 }
