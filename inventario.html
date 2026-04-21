@@ -248,6 +248,19 @@ function colorStock(cantidad) {
       guardar();
     };
 
+// 🧠 guardar unidad
+tr.querySelector("select").onchange = (e) => {
+  p.unidad = e.target.value;
+  guardar();
+};
+
+// 💰 guardar precio
+tr.querySelectorAll("input")[3].onchange = (e) => {
+  p.precio = Number(e.target.value);
+  guardar();
+};
+    
+
     // 🗑 eliminar
     tr.querySelector("button").onclick = () => {
       if (!confirm("¿Eliminar producto?")) return;
