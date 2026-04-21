@@ -11,6 +11,36 @@ let data = JSON.parse(localStorage.getItem("dataPOS")) || {};
 
 let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
 
+function normalizar(texto) {
+  return texto
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/[^\w\s]/g, "");
+}
+
+function buscarProducto(nombre) {
+
+  const n = normalizar(nombre);
+
+  return inventario.find(p => {
+
+    const nombreBase = normalizar(p.nombre);
+
+    const coincideNombre =
+      n.includes(nombreBase) ||
+      nombreBase.includes(n);
+
+    const coincideAlias =
+      p.alias?.some(a => {
+        const al = normalizar(a);
+        return n.includes(al) || al.includes(n);
+      });
+
+    return coincideNombre || coincideAlias;
+  });
+}
+
 
 // PINs
 const VALID_PINS = {
@@ -237,10 +267,7 @@ function agregar() {
 
 const nombre = extraerNombre(d.texto);
 
-let producto = inventario.find(p =>
-  nombre.includes(p.nombre) ||
-  p.alias?.some(a => nombre.includes(a))
-);
+let producto = buscarProducto(nombre);
 
 let costoBase = 0;
 
@@ -251,15 +278,16 @@ if (producto && producto.costo) {
 
 if (!producto) {
 
+  const nombreNormalizado = normalizar(nombre);
+
   producto = {
-    nombre,
+    nombre: nombreNormalizado,
     cantidad: d.cantidad,
-    costo: d.precio,
+    costo: d.precio || 0,
     alias: [nombre]
   };
 
   inventario.push(producto);
-
 } else {
 
   // ⚠️ evitar negativos extremos
