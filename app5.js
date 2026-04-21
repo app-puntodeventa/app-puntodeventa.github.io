@@ -1,3 +1,15 @@
+function normalizarProducto(p) {
+  return {
+    id: p.id || Date.now(),
+    nombre: p.nombre.toLowerCase().trim(),
+    stock: Number(p.stock ?? p.cantidad ?? 0),
+    costo: Number(p.costo ?? 0),
+    precioVenta: Number(p.precioVenta ?? p.precio ?? 0),
+    unidad: p.unidad || "pieza",
+    alias: p.alias || []
+  };
+}
+
 
 // ======================================
 // 🔐 CONFIG / ESTADO GLOBAL
@@ -10,6 +22,19 @@ let totalVenta = 0;
 let data = JSON.parse(localStorage.getItem("dataPOS")) || {};
 
 let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
+
+function normalizarProducto(p) {
+  return {
+    id: p.id || Date.now(),
+    nombre: p.nombre.toLowerCase().trim(),
+    stock: Number(p.stock ?? p.cantidad ?? 0),
+    costo: Number(p.costo ?? 0),
+    precioVenta: Number(p.precioVenta ?? p.precio ?? 0),
+    unidad: p.unidad || "pieza",
+    alias: p.alias || []
+  };
+}
+
 
 function normalizar(texto) {
   return texto
