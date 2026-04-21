@@ -188,25 +188,21 @@ const productoEncontrado = inventario.find(p =>
   p.alias?.some(a => nombreDetectado.includes(a))
 );
 
+  // preview inteligente único (sin pisarse)
 if (productoEncontrado) {
 
   preview.textContent =
     `📦 ${productoEncontrado.nombre} | 💰 Costo: $${productoEncontrado.costo || 0}`;
 
+} else if (d.multi) {
+
+  preview.textContent =
+    `${d.cantidad} x ${d.precio} = $${d.cantidad * d.precio}`;
+
 } else {
 
   preview.textContent = "";
-
 }
-
-  
-
-  // preview precio
-  if (d.multi) {
-    preview.textContent = `${d.cantidad} x ${d.precio} = $${d.cantidad * d.precio}`;
-  } else {
-    preview.textContent = "";
-  }
 
   // 🔍 FILTRAR sugerencias inteligentes
   const datalist = document.getElementById("sugerencias");
