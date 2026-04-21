@@ -27,12 +27,14 @@ function buscarProducto(nombre) {
 
     const nombreBase = normalizar(p.nombre);
 
+    // coincidencia fuerte
     const coincideNombre =
       n.includes(nombreBase) ||
       nombreBase.includes(n);
 
+    // coincidencia por alias
     const coincideAlias =
-      p.alias?.some(a => {
+      (p.alias || []).some(a => {
         const al = normalizar(a);
         return n.includes(al) || al.includes(n);
       });
