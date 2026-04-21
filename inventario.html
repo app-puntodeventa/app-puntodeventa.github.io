@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Inventario</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="p-4 bg-gray-100">
+
+<h1 class="text-xl font-bold mb-4">Inventario</h1>
+
+<div class="flex gap-2 mb-4">
+  <input id="invNombre" class="border p-2 w-full" placeholder="Producto">
+  <input id="invCantidad" class="border p-2 w-24" placeholder="Cant">
+  <input id="invCosto" class="border p-2 w-24" placeholder="Costo">
+  <button id="btnGuardar" class="bg-blue-600 text-white px-4">Guardar</button>
+</div>
+
+<div id="listaInventario" class="space-y-2"></div>
+
+<script src="inventario.js"></script>
+
+</body>
+</html>
