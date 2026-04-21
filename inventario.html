@@ -88,12 +88,14 @@
   <table class="w-full text-sm">
 
     <thead class="bg-gray-200 text-left">
-      <tr>
-        <th class="p-2">Producto</th>
-        <th class="p-2">Cantidad</th>
-        <th class="p-2">Costo</th>
-        <th class="p-2 text-center">Acciones</th>
-      </tr>
+    <tr>
+  <th class="p-2">Producto</th>
+  <th class="p-2">Cantidad</th>
+  <th class="p-2">Unidad</th>
+  <th class="p-2">Costo</th>
+  <th class="p-2">Precio</th>
+  <th class="p-2 text-center">Acciones</th>
+</tr>
     </thead>
 
     <tbody id="listaInventario"></tbody>
@@ -159,6 +161,9 @@ function limpiar() {
   document.getElementById("invNombre").value = "";
   document.getElementById("invCantidad").value = "";
   document.getElementById("invCosto").value = "";
+document.getElementById("invPrecio").value = "";
+document.getElementById("invUnidad").value = "pieza";
+  
 }
 
 // =======================
@@ -190,28 +195,41 @@ function colorStock(cantidad) {
     tr.className = color;
 
     tr.innerHTML = `
-      <td class="p-2">
-        <input value="${p.nombre}"
-          class="w-full border p-1 rounded bg-transparent">
-      </td>
+  <td class="p-2">
+    <input value="${p.nombre}"
+      class="w-full border p-1 rounded bg-transparent">
+  </td>
 
-      <td class="p-2">
-        <input type="number" value="${p.cantidad}"
-          class="w-20 border p-1 rounded">
-      </td>
+  <td class="p-2">
+    <input type="number" value="${p.cantidad}"
+      class="w-20 border p-1 rounded">
+  </td>
 
-      <td class="p-2">
-        <input type="number" value="${p.costo}"
-          class="w-20 border p-1 rounded">
-      </td>
+  <td class="p-2">
+    <select class="border p-1 rounded">
+      <option value="pieza" ${p.unidad === "pieza" ? "selected" : ""}>pieza</option>
+      <option value="kg" ${p.unidad === "kg" ? "selected" : ""}>kg</option>
+      <option value="g" ${p.unidad === "g" ? "selected" : ""}>g</option>
+      <option value="l" ${p.unidad === "l" ? "selected" : ""}>l</option>
+    </select>
+  </td>
 
-      <td class="p-2 text-center">
-        <button class="text-red-500">
-          <i class="bi bi-trash"></i>
-        </button>
-      </td>
-    `;
+  <td class="p-2">
+    <input type="number" value="${p.costo || 0}"
+      class="w-20 border p-1 rounded">
+  </td>
 
+  <td class="p-2">
+    <input type="number" value="${p.precio || 0}"
+      class="w-20 border p-1 rounded">
+  </td>
+
+  <td class="p-2 text-center">
+    <button class="text-red-500">
+      <i class="bi bi-trash"></i>
+    </button>
+  </td>
+`;
     // ✏️ editar nombre
     tr.querySelectorAll("input")[0].onchange = (e) => {
       p.nombre = e.target.value.toLowerCase();
