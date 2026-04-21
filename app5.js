@@ -367,7 +367,7 @@ localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
 const unidades = d.cantidad;
 
 const gananciaEstimada =
-  subtotal - (costoBase * unidades);
+  subtotal - (costoBase * d.cantidad);
   
 
 ventaActual.push({
