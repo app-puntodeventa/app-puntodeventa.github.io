@@ -88,7 +88,6 @@ function sincronizarInventario() {
 
 /**
  * 🆕 AGREGAR O ACTUALIZAR PRODUCTO EN INVENTARIO
- * SIN ACTUALIZAR AUTOMÁTICAMENTE EL PRECIO
  */
 function actualizarProductoInventario(nombre, precioVenta, unidad = "pieza", cantidad = 0) {
   const nombreNormalizado = nombre.toLowerCase().trim();
@@ -96,7 +95,6 @@ function actualizarProductoInventario(nombre, precioVenta, unidad = "pieza", can
   let producto = buscarProducto(nombreNormalizado);
 
   if (producto) {
-    // Producto existe: NO actualizar precio automáticamente
     console.log(`📦 Producto encontrado: "${producto.nombre}"`);
 
     // Agregar alias si no existe
@@ -217,8 +215,12 @@ function init() {
  * 🆕 ACTUALIZAR SELECT DE PRODUCTOS
  */
 function actualizarSelectProductos() {
-  if (!selectProducto) return;
+  if (!selectProducto) {
+    console.warn("selectProducto no encontrado");
+    return;
+  }
 
+  // Remover opciones excepto la primera
   const opcionesExistentes = selectProducto.querySelectorAll("option:not(:first-child)");
   opcionesExistentes.forEach(opt => opt.remove());
 
@@ -333,66 +335,75 @@ function extraerNombre(texto) {
 /**
  * Cuando selecciona producto del SELECT
  */
-selectProducto.addEventListener("change", () => {
-  const nombreSeleccionado = selectProducto.value;
-  
-  if (!nombreSeleccionado) {
-    input.value = "";
-    preview.textContent = "";
-    return;
-  }
-
-  const producto = buscarProducto(nombreSeleccionado);
-  
-  if (producto) {
-    const stock = producto.stock > 0 ? `(${producto.stock} en stock)` : "(sin stock)";
-    preview.innerHTML = `
-      <div class="flex justify-between items-center">
-        <span>📦 ${producto.nombre} - $${(producto.precioVenta || 0).toFixed(2)}</span>
-        <span class="text-xs">${stock}</span>
-      </div>
-    `;
+if (selectProducto) {
+  selectProducto.addEventListener("change", () => {
+    const nombreSeleccionado = selectProducto.value;
     
-    // Auto-llenar cantidad en el input
-    input.value = "1";
-    input.focus();
-  }
-});
+    if (!nombreSeleccionado) {
+      input.value = "";
+      preview.textContent = "";
+      return;
+    }
+
+    const producto = buscarProducto(nombreSeleccionado);
+    
+    if (producto) {
+      const stock = producto.stock > 0 ? `(${producto.stock} en stock)` : "(sin stock)";
+      preview.innerHTML = `
+        <div class="flex justify-between items-center">
+          <span>📦 ${producto.nombre} - $${(producto.precioVenta || 0).toFixed(2)}</span>
+          <span class="text-xs">${stock}</span>
+        </div>
+      `;
+      
+      // Auto-llenar cantidad en el input
+      input.value = "1";
+      input.focus();
+    }
+  });
+}
 
 /**
  * Cuando escribe en el input de cantidad/precio
  */
-input.addEventListener("input", () => {
-  const v = input.value.trim().toLowerCase();
-  
-  if (!v || selectProducto.value === "") {
-    preview.textContent = "";
-    return;
-  }
-
-  const d = parsear(v);
-
-  if (d.precioUnitario > 0) {
-    const nombreSeleccionado = selectProducto.value;
-    const producto = buscarProducto(nombreSeleccionado);
-
-    if (producto) {
-      const totalCalc = d.cantidad * d.precioUnitario;
-      preview.innerHTML = `
-        <div class="flex justify-between">
-          <span>${d.cantidad} × ${producto.nombre}</span>
-          <span class="font-bold">$${totalCalc.toFixed(2)}</span>
-        </div>
-      `;
+if (input) {
+  input.addEventListener("input", () => {
+    const v = input.value.trim().toLowerCase();
+    
+    if (!v || !selectProducto || selectProducto.value === "") {
+      preview.textContent = "";
+      return;
     }
-  }
-});
+
+    const d = parsear(v);
+
+    if (d.precioUnitario > 0) {
+      const nombreSeleccionado = selectProducto.value;
+      const producto = buscarProducto(nombreSeleccionado);
+
+      if (producto) {
+        const totalCalc = d.cantidad * d.precioUnitario;
+        preview.innerHTML = `
+          <div class="flex justify-between">
+            <span>${d.cantidad} × ${producto.nombre}</span>
+            <span class="font-bold">$${totalCalc.toFixed(2)}</span>
+          </div>
+        `;
+      }
+    }
+  });
+}
 
 // ======================================
 // ➕ AGREGAR PRODUCTO
 // ======================================
 
 function agregar() {
+  if (!selectProducto) {
+    alert("❌ Error: SELECT no encontrado");
+    return;
+  }
+
   const nombreSeleccionado = selectProducto.value;
   
   if (!nombreSeleccionado) {
@@ -486,27 +497,25 @@ function agregar() {
   navigator.vibrate?.(30);
 }
 
-input.addEventListener("keydown", e => {
-  if (e.key === "Enter") agregar();
-});
-
-// Crear botón de agregar si no existe
-let btnAdd = document.getElementById("btnAdd");
-if (!btnAdd) {
-  btnAdd = document.createElement("button");
-  btnAdd.id = "btnAdd";
-  btnAdd.className = "bg-green-500 text-white px-3 py-2 rounded hidden md:block";
-  btnAdd.innerHTML = "<i class='bi bi-plus-lg'></i>";
-  input.parentElement.appendChild(btnAdd);
+if (input) {
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter") agregar();
+  });
 }
 
-btnAdd.onclick = agregar;
+// Buscar y configurar botón de agregar
+let btnAdd = document.getElementById("btnAdd");
+if (btnAdd) {
+  btnAdd.onclick = agregar;
+}
 
 // ======================================
 // 🧾 PREVENTA
 // ======================================
 
 function renderPreVenta() {
+  if (!preVenta) return;
+
   preVenta.innerHTML = "";
 
   if (ventaActual.length === 0) {
@@ -543,55 +552,58 @@ function renderPreVenta() {
 // 💰 FINALIZAR VENTA
 // ======================================
 
-document.getElementById("btnFinalizar").onclick = () => {
-  console.log("btnFinalizar clicked");
-  console.log("ventaActual:", ventaActual);
+const btnFinalizar = document.getElementById("btnFinalizar");
+if (btnFinalizar) {
+  btnFinalizar.onclick = () => {
+    console.log("btnFinalizar clicked");
+    console.log("ventaActual:", ventaActual);
 
-  if (!ventaActual || ventaActual.length === 0) {
-    alert("❌ No hay productos en la venta");
-    return;
-  }
+    if (!ventaActual || ventaActual.length === 0) {
+      alert("❌ No hay productos en la venta");
+      return;
+    }
 
-  if (!usuarioActual) {
-    alert("❌ No hay usuario activo");
-    return;
-  }
+    if (!usuarioActual) {
+      alert("❌ No hay usuario activo");
+      return;
+    }
 
-  // Crear objeto de venta
-  const venta = {
-    items: JSON.parse(JSON.stringify(ventaActual)),
-    total: totalVenta,
-    usuario: usuarioActual,
-    fecha: new Date().toLocaleString()
+    // Crear objeto de venta
+    const venta = {
+      items: JSON.parse(JSON.stringify(ventaActual)),
+      total: totalVenta,
+      usuario: usuarioActual,
+      fecha: new Date().toLocaleString()
+    };
+
+    console.log("Venta a guardar:", venta);
+
+    // Asegurar que el usuario existe en data
+    if (!data[usuarioActual]) {
+      data[usuarioActual] = { ventas: [] };
+    }
+
+    // Guardar venta
+    data[usuarioActual].ventas.push(venta);
+    localStorage.setItem("dataPOS", JSON.stringify(data));
+
+    console.log("Venta guardada en localStorage");
+
+    // Renderizar la tarjeta
+    renderVenta(venta);
+
+    // Limpiar y cerrar
+    reset();
+    if (modal) modal.close();
+
+    // Actualizar totales
+    actualizarTotalDia();
+    actualizarGanancias();
+    renderHistorial();
+
+    alert("✅ Venta guardada correctamente\n📦 Inventario actualizado");
   };
-
-  console.log("Venta a guardar:", venta);
-
-  // Asegurar que el usuario existe en data
-  if (!data[usuarioActual]) {
-    data[usuarioActual] = { ventas: [] };
-  }
-
-  // Guardar venta
-  data[usuarioActual].ventas.push(venta);
-  localStorage.setItem("dataPOS", JSON.stringify(data));
-
-  console.log("Venta guardada en localStorage");
-
-  // Renderizar la tarjeta
-  renderVenta(venta);
-
-  // Limpiar y cerrar
-  reset();
-  modal.close();
-
-  // Actualizar totales
-  actualizarTotalDia();
-  actualizarGanancias();
-  renderHistorial();
-
-  alert("✅ Venta guardada correctamente\n📦 Inventario actualizado");
-};
+}
 
 // ======================================
 // 📊 TOTALES
@@ -626,9 +638,9 @@ function reset() {
   totalVenta = 0;
   actualizarTotalVenta();
   renderPreVenta();
-  selectProducto.value = "";
-  input.value = "";
-  preview.textContent = "";
+  if (selectProducto) selectProducto.value = "";
+  if (input) input.value = "";
+  if (preview) preview.textContent = "";
 }
 
 // ======================================
@@ -693,7 +705,9 @@ function renderVenta(v) {
     };
   }
 
-  listaVentas.prepend(div);
+  if (listaVentas) {
+    listaVentas.prepend(div);
+  }
 }
 
 // ======================================
@@ -725,116 +739,77 @@ function renderHistorial() {
 // 🆕 NUEVA VENTA
 // ======================================
 
-document.getElementById("btnNuevaVenta").onclick = () => {
-  reset();
-  modal.showModal();
-  selectProducto.focus();
-};
+const btnNuevaVenta = document.getElementById("btnNuevaVenta");
+if (btnNuevaVenta) {
+  btnNuevaVenta.onclick = () => {
+    console.log("btnNuevaVenta clicked");
+    reset();
+    if (modal) {
+      modal.showModal();
+      console.log("Modal abierto");
+      if (selectProducto) {
+        selectProducto.focus();
+      }
+    } else {
+      console.error("Modal no encontrado");
+    }
+  };
+}
 
 // ======================================
 // ❌ CERRAR MODAL
 // ======================================
 
-document.getElementById("btnCerrar").onclick = () => {
-  modal.close();
-};
+const btnCerrar = document.getElementById("btnCerrar");
+if (btnCerrar) {
+  btnCerrar.onclick = () => {
+    if (modal) modal.close();
+  };
+}
 
 // ======================================
 // 📄 PDF REPORTES
 // ======================================
 
-document.getElementById("btnPDF").onclick = () => {
-  if (typeof jsPDF === "undefined") {
-    alert("Error: jsPDF no está cargado");
-    return;
-  }
+const btnPDF = document.getElementById("btnPDF");
+if (btnPDF) {
+  btnPDF.onclick = () => {
+    if (typeof jsPDF === "undefined") {
+      alert("Error: jsPDF no está cargado");
+      return;
+    }
 
-  const { jsPDF: jsPDFClass } = window.jspdf;
-  const doc = new jsPDFClass();
+    const { jsPDF: jsPDFClass } = window.jspdf;
+    const doc = new jsPDFClass();
 
-  if (!data[usuarioActual]) {
-    alert("No hay datos para generar PDF");
-    return;
-  }
+    if (!data[usuarioActual]) {
+      alert("No hay datos para generar PDF");
+      return;
+    }
 
-  const ventas = data[usuarioActual].ventas || [];
-  let y = 10;
-  let total = 0;
+    const ventas = data[usuarioActual].ventas || [];
+    let y = 10;
+    let total = 0;
 
-  doc.setFontSize(18);
-  doc.text("REPORTE DE VENTAS", 10, y);
-  y += 8;
+    doc.setFontSize(18);
+    doc.text("REPORTE DE VENTAS", 10, y);
+    y += 8;
 
-  doc.setFontSize(12);
-  doc.text(`Usuario: ${usuarioActual}`, 10, y);
-  y += 8;
-
-  doc.line(10, y, 200, y);
-  y += 8;
-
-  ventas.forEach((v, i) => {
     doc.setFontSize(12);
-    doc.text(`Venta #${i + 1}`, 10, y);
-    y += 6;
-
-    doc.setFontSize(10);
-    v.items.forEach(it => {
-      doc.text(`• ${it.texto} = $${(it.subtotal || 0).toFixed(2)}`, 10, y);
-      y += 5;
-    });
-
-    doc.setFontSize(11);
-    doc.text(`Total: $${(v.total || 0).toFixed(2)}`, 10, y);
+    doc.text(`Usuario: ${usuarioActual}`, 10, y);
     y += 8;
 
     doc.line(10, y, 200, y);
-    y += 6;
-
-    total += v.total || 0;
-
-    if (y > 270) {
-      doc.addPage();
-      y = 10;
-    }
-  });
-
-  doc.setFontSize(14);
-  doc.text(`TOTAL DEL DÍA: $${total.toFixed(2)}`, 10, y + 10);
-
-  doc.save(`reporte-${usuarioActual}.pdf`);
-};
-
-document.getElementById("btnPDFGlobal").onclick = () => {
-  if (typeof jsPDF === "undefined") {
-    alert("Error: jsPDF no está cargado");
-    return;
-  }
-
-  const { jsPDF: jsPDFClass } = window.jspdf;
-  const doc = new jsPDFClass();
-
-  let y = 10;
-  let totalGlobal = 0;
-
-  doc.setFontSize(18);
-  doc.text("REPORTE GLOBAL DE VENTAS", 10, y);
-  y += 10;
-
-  Object.keys(data).forEach(usuario => {
-    const ventas = data[usuario]?.ventas || [];
-    if (!ventas.length) return;
-
-    doc.setFontSize(14);
-    doc.text(`Usuario: ${usuario}`, 10, y);
     y += 8;
 
     ventas.forEach((v, i) => {
-      doc.setFontSize(10);
-      doc.text(`Venta ${i + 1}`, 10, y);
+      doc.setFontSize(12);
+      doc.text(`Venta #${i + 1}`, 10, y);
       y += 6;
 
+      doc.setFontSize(10);
       v.items.forEach(it => {
-        doc.text(`- ${it.texto} = $${(it.subtotal || 0).toFixed(2)}`, 10, y);
+        doc.text(`• ${it.texto} = $${(it.subtotal || 0).toFixed(2)}`, 10, y);
         y += 5;
       });
 
@@ -842,7 +817,10 @@ document.getElementById("btnPDFGlobal").onclick = () => {
       doc.text(`Total: $${(v.total || 0).toFixed(2)}`, 10, y);
       y += 8;
 
-      totalGlobal += v.total || 0;
+      doc.line(10, y, 200, y);
+      y += 6;
+
+      total += v.total || 0;
 
       if (y > 270) {
         doc.addPage();
@@ -850,24 +828,83 @@ document.getElementById("btnPDFGlobal").onclick = () => {
       }
     });
 
-    y += 5;
-  });
+    doc.setFontSize(14);
+    doc.text(`TOTAL DEL DÍA: $${total.toFixed(2)}`, 10, y + 10);
 
-  doc.setFontSize(14);
-  doc.text(`TOTAL GLOBAL: $${totalGlobal.toFixed(2)}`, 10, y + 10);
+    doc.save(`reporte-${usuarioActual}.pdf`);
+  };
+}
 
-  doc.save("reporte-global.pdf");
-};
+const btnPDFGlobal = document.getElementById("btnPDFGlobal");
+if (btnPDFGlobal) {
+  btnPDFGlobal.onclick = () => {
+    if (typeof jsPDF === "undefined") {
+      alert("Error: jsPDF no está cargado");
+      return;
+    }
+
+    const { jsPDF: jsPDFClass } = window.jspdf;
+    const doc = new jsPDFClass();
+
+    let y = 10;
+    let totalGlobal = 0;
+
+    doc.setFontSize(18);
+    doc.text("REPORTE GLOBAL DE VENTAS", 10, y);
+    y += 10;
+
+    Object.keys(data).forEach(usuario => {
+      const ventas = data[usuario]?.ventas || [];
+      if (!ventas.length) return;
+
+      doc.setFontSize(14);
+      doc.text(`Usuario: ${usuario}`, 10, y);
+      y += 8;
+
+      ventas.forEach((v, i) => {
+        doc.setFontSize(10);
+        doc.text(`Venta ${i + 1}`, 10, y);
+        y += 6;
+
+        v.items.forEach(it => {
+          doc.text(`- ${it.texto} = $${(it.subtotal || 0).toFixed(2)}`, 10, y);
+          y += 5;
+        });
+
+        doc.setFontSize(11);
+        doc.text(`Total: $${(v.total || 0).toFixed(2)}`, 10, y);
+        y += 8;
+
+        totalGlobal += v.total || 0;
+
+        if (y > 270) {
+          doc.addPage();
+          y = 10;
+        }
+      });
+
+      y += 5;
+    });
+
+    doc.setFontSize(14);
+    doc.text(`TOTAL GLOBAL: $${totalGlobal.toFixed(2)}`, 10, y + 10);
+
+    doc.save("reporte-global.pdf");
+  };
+}
 
 // ======================================
 // 👤 LOGOUT
 // ======================================
 
-document.getElementById("btnLogout").onclick = () => {
-  localStorage.removeItem("usuarioActivo");
-  usuarioActual = null;
-  location.reload();
-};
+const btnLogout = document.getElementById("btnLogout");
+if (btnLogout) {
+  btnLogout.onclick = () => {
+    localStorage.removeItem("usuarioActivo");
+    usuarioActual = null;
+    location.reload();
+  };
+}
 
 // ======================================
 // 💰 GANANCIAS (ADMIN)
@@ -988,3 +1025,5 @@ window.addEventListener("storage", (event) => {
     actualizarSelectProductos();
   }
 });
+
+console.log("✅ Script cargado correctamente");
