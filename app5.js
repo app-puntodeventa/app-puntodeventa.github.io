@@ -312,26 +312,28 @@ if (!producto) {
 producto = {
   nombre: nombre.trim(),
   stock: 0,
-  costo: d.precio || 0,
+  costo: Number(d.precio) > 0 ? Number(d.precio) : 0,
   alias: [nombre]
 };
 
+  // si no hay costo real, dejarlo null para detectar errores
+if (!producto.costo) producto.costo = null;
   
   inventario.push(producto);
 } else {
 
   // 🔹 asegurar stock válido
-  if (typeof producto.cantidad !== "number") {
-    producto.cantidad = 0;
-  }
+if (typeof producto.stock !== "number") {
+  producto.stock = 0;
+}
 
-  // 🔻 restar inventario por venta
-  producto.stock = (producto.stock || 0) - d.cantidad;
+// 🔻 restar inventario por venta
+producto.stock -= d.cantidad;
 
-  // 🚫 evitar inventario negativo extremo
-  if (producto.cantidad < -100) {
-    producto.cantidad = -100;
-  }
+// 🚫 evitar negativo extremo
+if (producto.stock < -100) {
+  producto.stock = -100;
+}
 
   // 💰 solo actualizar costo si es realista
   if (d.precio > 0 && d.precio < 100000) {
@@ -350,9 +352,21 @@ producto = {
   }
 }
 
+// 🔒 limpiar datos corruptos antes de guardar
+inventario = inventario.map(p => ({
+  nombre: p.nombre,
+  stock: Number(p.stock || 0),
+  costo: Number(p.costo || 0),
+  alias: p.alias || []
+}));
+
 localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
   
-const gananciaEstimada = subtotal - (costoBase * (d.multi ? d.cantidad : 1));
+const unidades = d.cantidad;
+
+const gananciaEstimada =
+  subtotal - (costoBase * unidades);
+  
 
 ventaActual.push({
   id: Date.now(),
