@@ -349,9 +349,12 @@ const gananciaEstimada = subtotal - (costoBase * (d.multi ? d.cantidad : 1));
 ventaActual.push({
   id: Date.now(),
   usuario: usuarioActual,
-  ...d,
+  texto: d.texto,
+  cantidad: d.cantidad,
+  precio: d.precio,
+  multi: d.multi,
   subtotal,
-  costo: costoBase,
+  costoUnitario: costoBase,
   ganancia: gananciaEstimada
 });
 
