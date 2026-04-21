@@ -1,3 +1,6 @@
+let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
+
+
 // ======================================
 // 🔐 CONFIG / ESTADO GLOBAL
 // ======================================
@@ -135,6 +138,15 @@ function parsear(texto) {
 }
 
 
+function extraerNombre(texto) {
+  return texto
+    .toLowerCase()
+    .replace(/\d+/g, "")
+    .replace(/kilos?|kg|pieza?s?|de|a|x|cada|uno|por/g, "")
+    .trim();
+}
+
+
 // ======================================
 // 👀 PREVIEW
 // ======================================
@@ -165,6 +177,40 @@ function agregar() {
 
   const subtotal = d.multi ? d.cantidad * d.precio : d.precio;
 
+
+const nombre = extraerNombre(d.texto);
+
+let producto = inventario.find(p =>
+  nombre.includes(p.nombre) ||
+  p.alias?.some(a => nombre.includes(a))
+);
+
+if (!producto) {
+
+  producto = {
+    nombre,
+    cantidad: d.cantidad,
+    costo: d.precio,
+    alias: [nombre]
+  };
+
+  inventario.push(producto);
+
+} else {
+
+  producto.cantidad -= d.cantidad;
+
+  if (d.precio > 0) {
+    producto.costo = d.precio;
+  }
+
+  if (!producto.alias.includes(nombre)) {
+    producto.alias.push(nombre);
+  }
+}
+
+localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
+  
   ventaActual.push({
     id: Date.now(),
     usuario: usuarioActual,
