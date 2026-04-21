@@ -378,10 +378,10 @@ if (producto.stock < 0) {
   producto.stock = 0;
 }
 
-  // 💰 solo actualizar costo si es realista
-  if (d.precio > 0 && d.precio < 100000) {
-    producto.costo = d.precio;
-  }
+// 💰 SOLO actualizar precio de venta, NO costo
+if (d.precio > 0 && d.precio < 100000) {
+  producto.precio = d.precio;
+}
 
   // 🧠 agregar alias inteligente
   const aliasNormal = normalizar(nombre);
