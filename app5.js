@@ -159,33 +159,21 @@ function parsear(texto) {
 
   const t = texto.toLowerCase();
 
-  // 🧠 detectar unidad
-let unidad = "pieza";
-
-if (t.includes("kg") || t.includes("kilo") || t.includes("kilos")) {
-  unidad = "kg";
-}
-
-if (t.includes("gr") || t.includes("gramo") || t.includes("gramos")) {
-  unidad = "kg"; // 👈 todo se convierte a kg
-}
-
-// 🔄 normalizar gramos a kg
-if (unidad === "kg" && t.includes("gr")) {
-  if (nums.length > 0) {
-    cantidad = nums[0] / 1000;
-  }
-}
-  
-if (t.includes("lt") || t.includes("litro") || t.includes("litros")) {
-  unidad = "lt";
-}
-
   const nums = t.match(/\d+(\.\d+)?/g)?.map(Number) || [];
 
   let cantidad = 1;
   let precio = 0;
+  let unidad = "pieza";
   let multi = false;
+
+  // detectar unidad
+  if (t.includes("kg") || t.includes("kilo") || t.includes("kilos")) {
+    unidad = "kg";
+  }
+
+  if (t.includes("pieza") || t.includes("pza") || t.includes("piezas")) {
+    unidad = "pieza";
+  }
 
   const esMultiplicacion =
     t.includes("cada") ||
@@ -213,9 +201,17 @@ if (t.includes("lt") || t.includes("litro") || t.includes("litros")) {
     else multi = true;
   }
 
-  return { texto, cantidad, precio, multi, unidad };
-}
+  const subtotal = multi ? cantidad * precio : precio;
 
+  return {
+    texto,
+    cantidad,
+    precio,
+    unidad,
+    multi,
+    subtotal
+  };
+}
 
 function extraerNombre(texto) {
   return texto
