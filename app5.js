@@ -365,7 +365,7 @@ if (producto.stock < 0) {
 // 🔒 limpiar datos corruptos antes de guardar
 inventario = inventario.map(p => ({
   nombre: p.nombre,
-  cantidad: Number(p.cantidad || 0),
+  stock: Number(p.stock || 0),
   costo: Number(p.costo || 0),
   precio: Number(p.precio || 0),
   unidad: p.unidad || "pieza",
