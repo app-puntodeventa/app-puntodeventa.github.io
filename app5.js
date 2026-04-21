@@ -162,56 +162,55 @@ function parsear(texto) {
   const nums = t.match(/\d+(\.\d+)?/g)?.map(Number) || [];
 
   let cantidad = 1;
-  let precio = 0;
+  let precioUnitario = 0;
   let unidad = "pieza";
-  let multi = false;
+  let modoLote = false;
 
-  // detectar unidad
-  if (t.includes("kg") || t.includes("kilo") || t.includes("kilos")) {
+  // 🧠 detectar unidad
+  if (t.includes("kg") || t.includes("kilo")) {
     unidad = "kg";
-  }
-
-  if (t.includes("pieza") || t.includes("pza") || t.includes("piezas")) {
+  } else if (t.includes("pieza") || t.includes("pza")) {
     unidad = "pieza";
   }
 
+  // 🧠 detectar patrones de venta
   const esMultiplicacion =
+    t.includes(" x ") ||
     t.includes("cada") ||
-    t.includes("cada uno") ||
-    t.includes("de a") ||
-    t.includes("c/u") ||
-    t.includes(" x ");
+    t.includes("c/u");
 
-  const esTotalDirecto =
-    t.includes(" por ") ||
-    t.includes(" son ") ||
-    t.includes(" total") ||
-    t.includes(" pesos de");
+  const esPrecioTotal =
+    t.includes("por") ||
+    t.includes("total") ||
+    t.includes("son");
 
   if (nums.length === 1) {
-    precio = nums[0];
+    precioUnitario = nums[0];
   }
 
   if (nums.length >= 2) {
     cantidad = nums[0];
-    precio = nums[1];
+    precioUnitario = nums[1];
 
-    if (esMultiplicacion) multi = true;
-    else if (esTotalDirecto) multi = false;
-    else multi = true;
+    if (esMultiplicacion) modoLote = true;
+    else if (esPrecioTotal) modoLote = false;
+    else modoLote = true;
   }
 
-  const subtotal = multi ? cantidad * precio : precio;
+  const subtotal = modoLote
+    ? cantidad * precioUnitario
+    : precioUnitario;
 
   return {
     texto,
     cantidad,
-    precio,
+    precioUnitario,
     unidad,
-    multi,
-    subtotal
+    subtotal,
+    modoLote
   };
 }
+
 
 function extraerNombre(texto) {
   return texto
