@@ -247,8 +247,8 @@ const productoEncontrado = buscarProducto(nombreDetectado);
   // preview inteligente único (sin pisarse)
 if (productoEncontrado) {
 
-  preview.textContent =
-    `📦 ${productoEncontrado.nombre} | 💰 Costo: $${productoEncontrado.costo || 0}`;
+preview.textContent =
+  `📦 ${productoEncontrado.nombre} | 💰 Venta: $${productoEncontrado.precioVenta || 0}`;
 
 } else if (d.multi) {
 
@@ -402,7 +402,18 @@ if (producto.stock < 0) {
 }
 
 // 💰 SOLO actualizar precio de venta, NO costo
+// 🔥 SOLO actualizar precio si el usuario lo repite conscientemente
+if (producto.precioVenta && producto.precioVenta !== d.precio) {
 
+  const confirmar = confirm(
+    `¿Actualizar precio de ${producto.nombre} de $${producto.precioVenta} a $${d.precio}?`
+  );
+
+  if (confirmar) {
+    producto.precioVenta = d.precio;
+  }
+
+}
 
   // 🧠 agregar alias inteligente
   const aliasNormal = normalizar(nombre);
@@ -420,8 +431,8 @@ if (producto.stock < 0) {
 inventario = inventario.map(p => ({
   nombre: p.nombre,
   stock: Number(p.stock || 0),
-  costo: Number(p.costo || 0),
-  precio: Number(p.precio || 0),
+  costo: p.costo !== null ? Number(p.costo) : null,
+  precioVenta: p.precioVenta !== null ? Number(p.precioVenta) : null,
   unidad: p.unidad || "pieza",
   alias: p.alias || []
 }));
