@@ -290,16 +290,32 @@ if (!producto) {
   inventario.push(producto);
 } else {
 
-  // ⚠️ evitar negativos extremos
-  producto.cantidad = (producto.cantidad || 0) - d.cantidad;
+  // 🔹 asegurar stock válido
+  if (typeof producto.cantidad !== "number") {
+    producto.cantidad = 0;
+  }
 
-  // actualizar costo si viene uno válido
-  if (d.precio > 0) {
+  // 🔻 restar inventario por venta
+  producto.cantidad -= d.cantidad;
+
+  // 🚫 evitar inventario negativo extremo
+  if (producto.cantidad < -100) {
+    producto.cantidad = -100;
+  }
+
+  // 💰 solo actualizar costo si es realista
+  if (d.precio > 0 && d.precio < 100000) {
     producto.costo = d.precio;
   }
 
-  // guardar alias nuevos
-  if (!producto.alias.includes(nombre)) {
+  // 🧠 agregar alias inteligente
+  const aliasNormal = normalizar(nombre);
+
+  const existeAlias = producto.alias.some(a =>
+    normalizar(a) === aliasNormal
+  );
+
+  if (!existeAlias) {
     producto.alias.push(nombre);
   }
 }
