@@ -362,15 +362,14 @@ let producto = buscarProducto(nombre);
 
   if (!producto) {
 
-producto = {
-  nombre: nombre.trim(),
+producto = normalizarProducto({
+  nombre: nombre,
   stock: 0,
-  unidad: d.unidad,
   costo: null,
   precioVenta: d.precioUnitario,
-  alias: [nombre],
-  creadoDesdeVenta: true
-};
+  unidad: d.unidad,
+  alias: [nombre]
+});
 
 inventario.push(producto);
 
