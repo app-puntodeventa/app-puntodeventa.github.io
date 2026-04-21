@@ -409,8 +409,18 @@ localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
   
 const unidades = d.cantidad;
 
-const gananciaEstimada =
-  subtotal - (costoBase * d.cantidad);
+let gananciaEstimada = 0;
+
+// 🧠 solo calcular si hay costo real válido
+if (costoBase > 0) {
+
+  if (d.unidad === "kg") {
+    gananciaEstimada = subtotal - (costoBase * d.cantidad);
+  } else {
+    gananciaEstimada = subtotal - (costoBase * d.cantidad);
+  }
+
+}
   
 
 ventaActual.push({
