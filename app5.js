@@ -324,17 +324,17 @@ if (!producto.costo) producto.costo = null;
   inventario.push(producto);
 } else {
 
-  // 🔹 asegurar stock válido
-if (typeof producto.stock !== "number") {
-  producto.stock = 0;
+  // 🧠 asegurar stock válido
+if (typeof producto.cantidad !== "number") {
+  producto.cantidad = 0;
 }
 
-// 🔻 restar inventario por venta
-producto.stock -= d.cantidad;
+// 📉 descontar inventario correctamente
+producto.cantidad -= d.cantidad;
 
-// 🚫 evitar negativo extremo
-if (producto.stock < -100) {
-  producto.stock = -100;
+// 🚫 evitar negativos
+if (producto.cantidad < 0) {
+  producto.cantidad = 0;
 }
 
   // 💰 solo actualizar costo si es realista
@@ -357,8 +357,10 @@ if (producto.stock < -100) {
 // 🔒 limpiar datos corruptos antes de guardar
 inventario = inventario.map(p => ({
   nombre: p.nombre,
-  stock: Number(p.stock || 0),
+  cantidad: Number(p.cantidad || 0),
   costo: Number(p.costo || 0),
+  precio: Number(p.precio || 0),
+  unidad: p.unidad || "pieza",
   alias: p.alias || []
 }));
 
