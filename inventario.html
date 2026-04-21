@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Inventario</title>
+<title>📦 Inventario</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
@@ -13,92 +13,170 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#111827">
 
+<style>
+  .table-row-editable {
+    transition: all 0.3s ease;
+  }
+  
+  .table-row-editable:hover {
+    background-color: #f0f9ff;
+  }
+  
+  .table-row-editable.stock-bajo {
+    background-color: #fef3c7;
+  }
+  
+  .table-row-editable.stock-critico {
+    background-color: #fee2e2;
+  }
+  
+  .input-field {
+    transition: all 0.2s;
+  }
+  
+  .input-field:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  }
+</style>
+
 </head>
 
-<body class="bg-gray-100 min-h-screen flex flex-col">
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen flex flex-col">
 
 <!-- HEADER -->
-<header class="flex justify-between items-center bg-blue-600 text-white p-3 shadow">
+<header class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 shadow-lg">
+  <div class="max-w-6xl mx-auto flex justify-between items-center">
+    <div>
+      <h1 class="font-bold text-2xl flex items-center gap-2">
+        <i class="bi bi-box2-heart"></i>
+        Inventario
+      </h1>
+      <p class="text-blue-100 text-sm mt-1" id="totalProductos">Cargando...</p>
+    </div>
 
-  <div class="font-bold text-lg">
-    📦 Inventario
+    <div class="flex gap-3">
+      <button id="btnExportarExcel"
+        class="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-50 transition flex items-center gap-2 shadow">
+        <i class="bi bi-file-earmark-excel"></i>
+        Exportar
+      </button>
+
+      <a href="index5.html"
+        class="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-50 transition flex items-center gap-2 shadow">
+        <i class="bi bi-arrow-left"></i>
+        Volver
+      </a>
+    </div>
   </div>
-
-  <a href="index5.html"
-    class="bg-white text-blue-600 px-3 py-1 rounded text-sm flex items-center gap-1">
-    <i class="bi bi-arrow-left"></i>
-    Volver
-  </a>
-
 </header>
 
-<button id="btnExportarExcel"
-  class="bg-green-600 text-white px-3 py-2 rounded shadow">
-  📊 Exportar Excel
-</button>
-
 <!-- CONTENIDO -->
-<div class="p-4 flex flex-col gap-4 flex-1">
+<div class="p-6 flex flex-col gap-6 flex-1 max-w-6xl mx-auto w-full">
 
-  <!-- FORM -->
-  <div class="bg-white p-4 rounded shadow flex flex-col gap-3">
+  <!-- FORM AGREGAR PRODUCTO -->
+  <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+    <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
+      <i class="bi bi-plus-circle text-blue-600"></i>
+      Agregar Producto
+    </h2>
 
-    <input id="invNombre"
-      class="border p-2 rounded"
-      placeholder="Producto (ej: arroz, huevo)">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
 
-    <div class="flex gap-2">
+      <input id="invNombre"
+        class="input-field border border-gray-300 p-3 rounded-lg"
+        placeholder="Producto" autofocus>
 
       <input id="invCantidad"
         type="number"
-        class="border p-2 rounded w-1/3"
-        placeholder="Cantidad">
+        class="input-field border border-gray-300 p-3 rounded-lg"
+        placeholder="Cantidad"
+        min="0">
 
       <input id="invCosto"
         type="number"
-        class="border p-2 rounded w-1/3"
-        placeholder="Costo">
+        step="0.01"
+        class="input-field border border-gray-300 p-3 rounded-lg"
+        placeholder="Costo"
+        min="0">
 
       <input id="invPrecio"
         type="number"
-        class="border p-2 rounded w-1/3"
-        placeholder="Precio">
+        step="0.01"
+        class="input-field border border-gray-300 p-3 rounded-lg"
+        placeholder="Precio"
+        min="0">
+
+      <select id="invUnidad" class="input-field border border-gray-300 p-3 rounded-lg">
+        <option value="pieza">Pieza</option>
+        <option value="kg">Kg</option>
+        <option value="g">Gramo</option>
+        <option value="l">Litro</option>
+      </select>
 
     </div>
 
-    <select id="invUnidad" class="border p-2 rounded w-full">
-      <option value="pieza">Pieza</option>
-      <option value="kg">Kilogramo (kg)</option>
-      <option value="g">Gramo (g)</option>
-      <option value="l">Litro (l)</option>
-    </select>
-
     <button id="btnGuardar"
-      class="bg-blue-600 text-white py-2 rounded">
-      ➕ Guardar producto
+      class="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg font-bold hover:from-blue-700 hover:to-blue-800 transition flex items-center justify-center gap-2">
+      <i class="bi bi-plus-lg"></i>
+      Guardar Producto
     </button>
 
   </div>
 
-  <!-- LISTA -->
-  <div class="bg-white rounded shadow overflow-x-auto">
+  <!-- FILTROS Y ESTADÍSTICAS -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500">
+      <p class="text-gray-600 text-sm">Total Productos</p>
+      <p class="text-2xl font-bold text-blue-600" id="statTotal">0</p>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-yellow-500">
+      <p class="text-gray-600 text-sm">Stock Bajo</p>
+      <p class="text-2xl font-bold text-yellow-600" id="statBajo">0</p>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-red-500">
+      <p class="text-gray-600 text-sm">Sin Stock</p>
+      <p class="text-2xl font-bold text-red-600" id="statCritico">0</p>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-green-500">
+      <p class="text-gray-600 text-sm">Valor Total</p>
+      <p class="text-2xl font-bold text-green-600" id="statValor">$0</p>
+    </div>
+  </div>
 
-    <table class="w-full text-sm">
+  <!-- BUSCADOR -->
+  <div class="bg-white p-4 rounded-xl shadow">
+    <input id="buscador"
+      type="text"
+      placeholder="🔍 Busca por nombre..."
+      class="input-field w-full border border-gray-300 p-3 rounded-lg">
+  </div>
 
-      <thead class="bg-gray-200 text-left">
-        <tr>
-          <th class="p-2">Producto</th>
-          <th class="p-2">Cantidad</th>
-          <th class="p-2">Unidad</th>
-          <th class="p-2">Costo</th>
-          <th class="p-2">Precio</th>
-          <th class="p-2 text-center">Acciones</th>
-        </tr>
-      </thead>
+  <!-- TABLA -->
+  <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
 
-      <tbody id="listaInventario"></tbody>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
 
-    </table>
+        <thead class="bg-gradient-to-r from-gray-100 to-gray-50 border-b-2 border-gray-300 sticky top-0">
+          <tr>
+            <th class="p-3 text-left font-bold text-gray-700">Producto</th>
+            <th class="p-3 text-center font-bold text-gray-700">Stock</th>
+            <th class="p-3 text-center font-bold text-gray-700">Unidad</th>
+            <th class="p-3 text-right font-bold text-gray-700">Costo</th>
+            <th class="p-3 text-right font-bold text-gray-700">Precio</th>
+            <th class="p-3 text-right font-bold text-gray-700">Margen</th>
+            <th class="p-3 text-center font-bold text-gray-700">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody id="listaInventario" class="divide-y divide-gray-200">
+          <!-- Se llena dinámicamente -->
+        </tbody>
+
+      </table>
+    </div>
 
   </div>
 
@@ -113,45 +191,68 @@ let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
 const lista = document.getElementById("listaInventario");
 
 // =======================
+// 📊 ACTUALIZAR ESTADÍSTICAS
+// =======================
+function actualizarEstadisticas() {
+  const total = inventario.length;
+  const bajo = inventario.filter(p => p.cantidad > 0 && p.cantidad < 5).length;
+  const critico = inventario.filter(p => p.cantidad <= 0).length;
+  const valor = inventario.reduce((sum, p) => sum + ((p.cantidad || 0) * (p.precio || 0)), 0);
+
+  document.getElementById("statTotal").textContent = total;
+  document.getElementById("statBajo").textContent = bajo;
+  document.getElementById("statCritico").textContent = critico;
+  document.getElementById("statValor").textContent = `$${valor.toFixed(2)}`;
+  document.getElementById("totalProductos").textContent = `${total} productos en el sistema`;
+}
+
+// =======================
 // ➕ GUARDAR PRODUCTO
 // =======================
 document.getElementById("btnGuardar").onclick = () => {
 
   const nombre = document.getElementById("invNombre").value.toLowerCase().trim();
   const cantidad = Number(document.getElementById("invCantidad").value) || 0;
-  const costo = Number(document.getElementById("invCosto").value) || 0;
+  const costo = Number(document.getElementById("invCosto").value) || null;
   const precio = Number(document.getElementById("invPrecio").value) || 0;
   const unidad = document.getElementById("invUnidad").value;
 
-  if (!nombre) return alert("Escribe un producto");
+  if (!nombre) {
+    alert("⚠️ Escribe un nombre de producto");
+    return;
+  }
 
   const existente = inventario.find(p =>
     p.nombre.trim().toLowerCase() === nombre
   );
 
   if (existente) {
-
     existente.cantidad += cantidad;
-
     if (costo) existente.costo = costo;
-    if (precio) existente.precio = precio;
+    if (precio) existente.precioVenta = precio;
     if (unidad) existente.unidad = unidad;
-
+    
+    alert(`✅ Stock actualizado: ${nombre}`);
   } else {
-
     inventario.push({
+      id: Date.now(),
       nombre,
+      stock: cantidad,
       cantidad,
       costo: costo || null,
-      precio: precio || 0,
+      precioVenta: precio,
+      precio: precio,
       unidad: unidad || "pieza",
       alias: []
     });
+    
+    alert(`✨ Producto agregado: ${nombre}`);
   }
 
   guardar();
   limpiar();
   render();
+  actualizarEstadisticas();
 };
 
 // =======================
@@ -170,7 +271,21 @@ function limpiar() {
   document.getElementById("invCosto").value = "";
   document.getElementById("invPrecio").value = "";
   document.getElementById("invUnidad").value = "pieza";
+  document.getElementById("invNombre").focus();
 }
+
+// =======================
+// 🔍 BUSCADOR
+// =======================
+document.getElementById("buscador").addEventListener("input", (e) => {
+  const termino = e.target.value.toLowerCase();
+  const filas = document.querySelectorAll("tbody tr");
+  
+  filas.forEach(fila => {
+    const nombre = fila.querySelector("td:first-child").textContent.toLowerCase();
+    fila.style.display = nombre.includes(termino) ? "" : "none";
+  });
+});
 
 // =======================
 // 🧾 RENDER
@@ -183,54 +298,73 @@ function render() {
 
     const tr = document.createElement("tr");
 
-    let color = "";
-    if (p.cantidad <= 0) color = "bg-red-100";
-    else if (p.cantidad < 5) color = "bg-yellow-100";
+    let colorClase = "table-row-editable";
+    if (p.cantidad <= 0) colorClase += " stock-critico";
+    else if (p.cantidad < 5) colorClase += " stock-bajo";
 
-    tr.className = color;
+    tr.className = colorClase;
+
+    const margen = (p.precio && p.costo) ? ((p.precio - p.costo) / p.costo * 100).toFixed(1) : "N/A";
+    const margenColor = margen !== "N/A" && margen >= 30 ? "text-green-600" : margen !== "N/A" && margen >= 10 ? "text-yellow-600" : "text-red-600";
 
     tr.innerHTML = `
-      <td class="p-2"><input value="${p.nombre}" class="w-full border p-1 rounded"></td>
-      <td class="p-2"><input type="number" value="${p.cantidad}" class="w-20 border p-1 rounded"></td>
-      <td class="p-2">
-        <select class="border p-1 rounded">
-          <option value="pieza" ${p.unidad === "pieza" ? "selected" : ""}>pieza</option>
-          <option value="kg" ${p.unidad === "kg" ? "selected" : ""}>kg</option>
-          <option value="g" ${p.unidad === "g" ? "selected" : ""}>g</option>
-          <option value="l" ${p.unidad === "l" ? "selected" : ""}>l</option>
+      <td class="p-3">
+        <input value="${p.nombre}" class="input-field w-full border border-gray-200 p-1 rounded" readonly style="font-weight: bold;">
+      </td>
+      <td class="p-3 text-center">
+        <input type="number" value="${p.cantidad || 0}" class="input-field w-20 border border-gray-200 p-1 rounded text-center" min="0">
+      </td>
+      <td class="p-3 text-center">
+        <select class="input-field border border-gray-200 p-1 rounded text-center">
+          <option value="pieza" ${p.unidad === "pieza" ? "selected" : ""}>Pieza</option>
+          <option value="kg" ${p.unidad === "kg" ? "selected" : ""}>Kg</option>
+          <option value="g" ${p.unidad === "g" ? "selected" : ""}>G</option>
+          <option value="l" ${p.unidad === "l" ? "selected" : ""}>L</option>
         </select>
       </td>
-      <td class="p-2"><input type="number" value="${p.costo || 0}" class="w-20 border p-1 rounded"></td>
-      <td class="p-2"><input type="number" value="${p.precio || 0}" class="w-20 border p-1 rounded"></td>
-      <td class="p-2 text-center">
-        <button class="text-red-500"><i class="bi bi-trash"></i></button>
+      <td class="p-3 text-right">
+        <input type="number" step="0.01" value="${p.costo || 0}" class="input-field w-24 border border-gray-200 p-1 rounded text-right" min="0">
+      </td>
+      <td class="p-3 text-right">
+        <input type="number" step="0.01" value="${p.price || p.precioVenta || p.precio || 0}" class="input-field w-24 border border-gray-200 p-1 rounded text-right font-bold text-blue-600" min="0">
+      </td>
+      <td class="p-3 text-right ${margenColor} font-bold">
+        ${margen}%
+      </td>
+      <td class="p-3 text-center">
+        <button class="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded transition">
+          <i class="bi bi-trash"></i>
+        </button>
       </td>
     `;
 
     const inputs = tr.querySelectorAll("input");
 
-    // nombre
-    inputs[0].onchange = e => {
-      p.nombre = e.target.value.toLowerCase();
-      guardar();
-    };
-
     // cantidad
     inputs[1].onchange = e => {
-      p.cantidad = Number(e.target.value);
+      p.cantidad = Number(e.target.value) || 0;
+      p.stock = p.cantidad;
       guardar();
+      render();
+      actualizarEstadisticas();
     };
 
     // costo
     inputs[2].onchange = e => {
-      p.costo = Number(e.target.value);
+      p.costo = Number(e.target.value) || null;
       guardar();
+      render();
+      actualizarEstadisticas();
     };
 
     // precio
     inputs[3].onchange = e => {
-      p.precio = Number(e.target.value);
+      const valor = Number(e.target.value) || 0;
+      p.precio = valor;
+      p.precioVenta = valor;
       guardar();
+      render();
+      actualizarEstadisticas();
     };
 
     // unidad
@@ -241,14 +375,17 @@ function render() {
 
     // eliminar
     tr.querySelector("button").onclick = () => {
-      if (!confirm("¿Eliminar producto?")) return;
+      if (!confirm(`¿Eliminar ${p.nombre}?`)) return;
       inventario.splice(i, 1);
       guardar();
       render();
+      actualizarEstadisticas();
     };
 
     lista.appendChild(tr);
   });
+
+  actualizarEstadisticas();
 }
 
 render();
@@ -263,7 +400,8 @@ document.getElementById("btnExportarExcel").onclick = () => {
     Cantidad: p.cantidad,
     Unidad: p.unidad,
     Costo: p.costo,
-    Precio: p.precio,
+    Precio: p.precioVenta || p.precio,
+    Margen: p.precio && p.costo ? ((p.precio - p.costo) / p.costo * 100).toFixed(1) + "%" : "N/A",
     Alias: (p.alias || []).join(", ")
   }));
 
@@ -272,8 +410,20 @@ document.getElementById("btnExportarExcel").onclick = () => {
 
   XLSX.utils.book_append_sheet(wb, ws, "Inventario");
 
-  XLSX.writeFile(wb, "inventario.xlsx");
+  XLSX.writeFile(wb, `inventario-${new Date().toISOString().split('T')[0]}.xlsx`);
 };
+
+// =======================
+// 🔄 SINCRONIZACIÓN EN TIEMPO REAL
+// =======================
+window.addEventListener("storage", (event) => {
+  if (event.key === "inventarioPOS") {
+    console.log("📡 Inventario sincronizado desde venta rápida");
+    inventario = JSON.parse(event.newValue) || [];
+    render();
+    actualizarEstadisticas();
+  }
+});
 
 </script>
 
