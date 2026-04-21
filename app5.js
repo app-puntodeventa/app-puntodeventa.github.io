@@ -372,7 +372,8 @@ if (!producto) {
 producto = {
   nombre: nombre.trim(),
   stock: 0,
-  costo: Number(d.precio) > 0 ? Number(d.precio) : 0,
+  precioVenta: Number(d.precio) > 0 ? Number(d.precio) : null,
+costo: null,
   unidad: d.unidad,
   alias: [nombre]
 };
