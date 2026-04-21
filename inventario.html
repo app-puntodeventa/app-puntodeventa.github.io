@@ -47,17 +47,32 @@
       class="border p-2 rounded"
       placeholder="Producto (ej: huevo, lápiz)">
 
-    <div class="flex gap-2">
-      <input id="invCantidad"
-        type="number"
-        class="border p-2 rounded w-1/2"
-        placeholder="Cantidad">
+<div class="flex gap-2">
 
-      <input id="invCosto"
-        type="number"
-        class="border p-2 rounded w-1/2"
-        placeholder="Costo">
-    </div>
+  <input id="invCantidad"
+    type="number"
+    class="border p-2 rounded w-1/3"
+    placeholder="Cantidad">
+
+  <input id="invCosto"
+    type="number"
+    class="border p-2 rounded w-1/3"
+    placeholder="Costo">
+
+  <input id="invPrecio"
+    type="number"
+    class="border p-2 rounded w-1/3"
+    placeholder="Precio">
+
+</div>
+
+<select id="invUnidad" class="border p-2 rounded w-full">
+  <option value="pieza">Pieza</option>
+  <option value="kg">Kilogramo (kg)</option>
+  <option value="g">Gramo (g)</option>
+  <option value="l">Litro (l)</option>
+</select>
+    
 
     <button id="btnGuardar"
       class="bg-blue-600 text-white py-2 rounded">
