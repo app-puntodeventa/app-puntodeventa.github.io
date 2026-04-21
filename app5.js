@@ -159,6 +159,21 @@ function parsear(texto) {
 
   const t = texto.toLowerCase();
 
+  // 🧠 detectar unidad
+let unidad = "pieza";
+
+if (t.includes("kg") || t.includes("kilo") || t.includes("kilos")) {
+  unidad = "kg";
+}
+
+if (t.includes("gr") || t.includes("gramo") || t.includes("gramos")) {
+  unidad = "gr";
+}
+
+if (t.includes("lt") || t.includes("litro") || t.includes("litros")) {
+  unidad = "lt";
+}
+
   const nums = t.match(/\d+(\.\d+)?/g)?.map(Number) || [];
 
   let cantidad = 1;
@@ -191,7 +206,7 @@ function parsear(texto) {
     else multi = true;
   }
 
-  return { texto, cantidad, precio, multi };
+  return { texto, cantidad, precio, multi, unidad };
 }
 
 
@@ -323,7 +338,7 @@ producto = {
   nombre: nombre.trim(),
   stock: 0,
   costo: Number(d.precio) > 0 ? Number(d.precio) : 0,
-  unidad: "pieza",
+  unidad: d.unidad,
   alias: [nombre]
 };
 
