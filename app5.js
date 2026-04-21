@@ -1,21 +1,29 @@
 "use strict";
 
-/* ==============================
+/* =====================================================
 🔐 ESTADO GLOBAL
-============================== */
+===================================================== */
 
-let usuarioActual = null;
+const STORAGE_DATA = "dataPOS";
+const STORAGE_INV = "inventarioPOS";
+const STORAGE_USER = "usuarioActivo";
+
+let usuarioActual = localStorage.getItem(STORAGE_USER);
 let ventaActual = [];
 let totalVenta = 0;
 
-let data = JSON.parse(localStorage.getItem("dataPOS")) || {};
-
-let inventario = (JSON.parse(localStorage.getItem("inventarioPOS")) || [])
+let data = JSON.parse(localStorage.getItem(STORAGE_DATA)) || {};
+let inventario = (JSON.parse(localStorage.getItem(STORAGE_INV)) || [])
   .map(normalizarProducto);
 
-/* ==============================
+/* =====================================================
 🧠 UTILIDADES
-============================== */
+===================================================== */
+
+function saveAll() {
+  localStorage.setItem(STORAGE_DATA, JSON.stringify(data));
+  localStorage.setItem(STORAGE_INV, JSON.stringify(inventario));
+}
 
 function normalizarProducto(p) {
   return {
@@ -29,61 +37,57 @@ function normalizarProducto(p) {
   };
 }
 
-function normalizar(texto) {
-  return (texto || "")
+function norm(t) {
+  return (t || "")
     .toLowerCase()
     .trim()
     .replace(/\s+/g, " ")
     .replace(/[^\w\s]/g, "");
 }
 
-function escaparHTML(texto) {
-  return (texto || "")
+function escapeHTML(t) {
+  return (t || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(/>/g, "&gt;");
 }
 
-function extraerNombre(texto) {
-  return (texto || "")
+function extraerNombre(t) {
+  return (t || "")
     .toLowerCase()
     .replace(/\d+/g, "")
-    .replace(/\b(kilos?|kg|pieza?s?|pzas?|de|a|x|cada|uno|por|pesos?)\b/g, "")
+    .replace(/\b(kilos?|kg|pieza?s?|pzas?|de|x|cada|uno|por)\b/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-/* ==============================
+/* =====================================================
 📦 INVENTARIO
-============================== */
+===================================================== */
 
 function buscarProducto(nombre) {
-  const n = normalizar(nombre);
+  const n = norm(nombre);
 
   return inventario.find(p => {
-    const base = normalizar(p.nombre);
+    const base = norm(p.nombre);
 
-    const matchNombre =
-      n.includes(base) || base.includes(n);
+    const matchNombre = n.includes(base) || base.includes(n);
 
-    const matchAlias =
-      (p.alias || []).some(a => {
-        const al = normalizar(a);
-        return n.includes(al) || al.includes(n);
-      });
+    const matchAlias = (p.alias || []).some(a => {
+      const al = norm(a);
+      return n.includes(al) || al.includes(n);
+    });
 
     return matchNombre || matchAlias;
   });
 }
 
-function registrarVentaEnInventario(item) {
+function registrarInventario(item) {
   const nombre = extraerNombre(item.texto);
-  let producto = buscarProducto(nombre);
+  let p = buscarProducto(nombre);
 
-  if (!producto) {
-    producto = normalizarProducto({
+  if (!p) {
+    p = normalizarProducto({
       nombre,
       stock: 0,
       costo: item.costoUnitario || 0,
@@ -91,18 +95,17 @@ function registrarVentaEnInventario(item) {
       unidad: item.unidad,
       alias: [nombre]
     });
-
-    inventario.push(producto);
+    inventario.push(p);
   }
 
-  producto.stock = Math.max(0, (producto.stock || 0) - item.cantidad);
+  p.stock = Math.max(0, (p.stock || 0) - item.cantidad);
 
-  localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
+  saveAll();
 }
 
-/* ==============================
+/* =====================================================
 🔐 LOGIN
-============================== */
+===================================================== */
 
 const VALID_PINS = {
   "4829": "ADMIN",
@@ -117,103 +120,56 @@ document.getElementById("btnLogin").onclick = () => {
 
   usuarioActual = VALID_PINS[pin];
 
-  if (!data[usuarioActual]) {
-    data[usuarioActual] = { ventas: [] };
-  }
+  if (!data[usuarioActual]) data[usuarioActual] = { ventas: [] };
 
-  localStorage.setItem("usuarioActivo", usuarioActual);
+  localStorage.setItem(STORAGE_USER, usuarioActual);
 
   document.getElementById("loginScreen").style.display = "none";
 
   init();
 };
 
-/* ==============================
+/* =====================================================
 🚀 INIT
-============================== */
+===================================================== */
 
 function init() {
-  const user = localStorage.getItem("usuarioActivo");
-
-  if (!user) {
+  if (!usuarioActual) {
     document.getElementById("loginScreen").style.display = "flex";
     return;
   }
-
-  usuarioActual = user;
 
   document.getElementById("loginScreen").style.display = "none";
   document.getElementById("userLabel").textContent = usuarioActual;
 
   renderHistorial();
-  actualizarTotalDia();
-  actualizarSugerencias();
-  renderProductosRapidos();
-  actualizarGanancias();
+  actualizarUI();
 }
 
-/* ==============================
-🔎 PARSER
-============================== */
+/* =====================================================
+🧠 PARSER
+===================================================== */
 
 function parsear(texto) {
-  const t = texto.toLowerCase();
-  const nums = t.match(/\d+(\.\d+)?/g)?.map(Number) || [];
+  const nums = texto.match(/\d+(\.\d+)?/g)?.map(Number) || [];
 
-  let cantidad = 1;
-  let precioUnitario = nums[0] || 0;
-  let unidad = "pieza";
-  let modoLote = true;
-
-  if (t.includes("kg") || t.includes("kilo")) unidad = "kg";
-
-  if (nums.length >= 2) {
-    cantidad = nums[0];
-    precioUnitario = nums[1];
-  }
-
-  const subtotal = cantidad * precioUnitario;
+  let cantidad = nums[0] || 1;
+  let precio = nums[1] || nums[0] || 0;
 
   return {
     texto,
     cantidad,
-    precioUnitario,
-    unidad,
-    subtotal,
-    modoLote
+    precio,
+    subtotal: cantidad * precio
   };
 }
 
-/* ==============================
-👀 PREVIEW
-============================== */
+/* =====================================================
+➕ VENTAS
+===================================================== */
 
 const input = document.getElementById("inputProducto");
 const preview = document.getElementById("preview");
-
-input.addEventListener("input", () => {
-  const v = input.value.trim();
-
-  if (!v) {
-    preview.textContent = "";
-    return;
-  }
-
-  const d = parsear(v);
-  const nombreDetectado = extraerNombre(v);
-
-  const producto = buscarProducto(nombreDetectado);
-
-  if (producto) {
-    preview.textContent = `📦 ${producto.nombre} | $${producto.precioVenta}`;
-  } else {
-    preview.textContent = `${d.cantidad} x ${d.precioUnitario} = $${d.subtotal}`;
-  }
-});
-
-/* ==============================
-➕ AGREGAR
-============================== */
 
 function agregar() {
   const v = input.value.trim();
@@ -222,21 +178,19 @@ function agregar() {
   const d = parsear(v);
 
   const item = {
-    texto: d.texto,
+    texto: v,
     cantidad: d.cantidad,
-    unidad: d.unidad,
-    precio: d.precioUnitario,
-    costoUnitario: 0,
-    subtotal: d.subtotal
+    precio: d.precio,
+    subtotal: d.subtotal,
+    costoUnitario: 0
   };
 
-  registrarVentaEnInventario(item);
+  registrarInventario(item);
 
   ventaActual.push(item);
   totalVenta += item.subtotal;
 
-  actualizarTotalVenta();
-  renderPreVenta();
+  actualizarUI();
 
   input.value = "";
   preview.textContent = "";
@@ -248,31 +202,30 @@ input.addEventListener("keydown", e => {
 
 document.getElementById("btnAdd").onclick = agregar;
 
-/* ==============================
+/* =====================================================
 🧾 PREVENTA
-============================== */
+===================================================== */
 
 function renderPreVenta() {
-  const preVenta = document.getElementById("preVenta");
-  preVenta.innerHTML = "";
+  const el = document.getElementById("preVenta");
+  el.innerHTML = "";
 
-  ventaActual.forEach((item, i) => {
+  ventaActual.forEach((i, idx) => {
     const div = document.createElement("div");
 
-    div.className = "flex justify-between bg-gray-100 p-2 rounded";
-
+    div.className = "flex justify-between p-2 bg-gray-100 rounded";
     div.innerHTML = `
-      <span>${escaparHTML(item.texto)}</span>
-      <span>$${item.subtotal}</span>
+      <span>${escapeHTML(i.texto)}</span>
+      <span>$${i.subtotal}</span>
     `;
 
-    preVenta.appendChild(div);
+    el.appendChild(div);
   });
 }
 
-/* ==============================
+/* =====================================================
 💰 FINALIZAR VENTA
-============================== */
+===================================================== */
 
 document.getElementById("btnFinalizar").onclick = () => {
   if (!ventaActual.length) return;
@@ -286,124 +239,92 @@ document.getElementById("btnFinalizar").onclick = () => {
 
   data[usuarioActual].ventas.push(venta);
 
-  localStorage.setItem("dataPOS", JSON.stringify(data));
+  saveAll();
 
   renderVenta(venta);
 
   reset();
 };
 
-/* ==============================
+/* =====================================================
 🔄 RESET
-============================== */
+===================================================== */
 
 function reset() {
   ventaActual = [];
   totalVenta = 0;
-  renderPreVenta();
-  actualizarTotalVenta();
+  actualizarUI();
 }
 
-/* ==============================
-💰 TOTALES
-============================== */
+/* =====================================================
+📊 UI CENTRAL
+===================================================== */
 
-function actualizarTotalVenta() {
+function actualizarUI() {
   document.getElementById("totalVenta").textContent = "$" + totalVenta;
+  renderPreVenta();
 }
 
-function actualizarTotalDia() {
-  const ventas = data[usuarioActual]?.ventas || [];
-  const total = ventas.reduce((a, v) => a + v.total, 0);
-
-  document.getElementById("totalDia").textContent = "$" + total;
-}
-
-/* ==============================
+/* =====================================================
 🧾 HISTORIAL
-============================== */
+===================================================== */
 
 function renderHistorial() {
-  const lista = document.getElementById("listaVentas");
-  lista.innerHTML = "";
+  const el = document.getElementById("listaVentas");
+  el.innerHTML = "";
 
   const ventas = data[usuarioActual]?.ventas || [];
   ventas.forEach(renderVenta);
 }
 
-/* ==============================
-🧾 VENTA CARD
-============================== */
-
 function renderVenta(v) {
-  const lista = document.getElementById("listaVentas");
+  const el = document.getElementById("listaVentas");
 
   const div = document.createElement("div");
   div.className = "p-3 bg-yellow-100 rounded";
 
   div.innerHTML = `
-    <div class="font-bold">${v.usuario}</div>
-    <div class="text-xs">${v.fecha}</div>
-    <div class="font-bold">Total: $${v.total}</div>
+    <div><b>${v.usuario}</b></div>
+    <div>${v.fecha}</div>
+    <div><b>Total: $${v.total}</b></div>
   `;
 
-  lista.prepend(div);
+  el.prepend(div);
 }
 
-/* ==============================
+/* =====================================================
 📦 SUGERENCIAS
-============================== */
+===================================================== */
 
 function actualizarSugerencias() {
-  const datalist = document.getElementById("sugerencias");
-  datalist.innerHTML = "";
+  const d = document.getElementById("sugerencias");
+  d.innerHTML = "";
 
   inventario.forEach(p => {
-    const opt = document.createElement("option");
-    opt.value = p.nombre;
-    datalist.appendChild(opt);
+    const o = document.createElement("option");
+    o.value = p.nombre;
+    d.appendChild(o);
   });
 }
 
-/* ==============================
-💸 GANANCIAS
-============================== */
+/* =====================================================
+💸 GANANCIAS (ADMIN)
+===================================================== */
 
 function actualizarGanancias() {
   if (usuarioActual !== "ADMIN") return;
 
   const ventas = data[usuarioActual]?.ventas || [];
 
-  let ingresos = 0;
+  let total = 0;
+  ventas.forEach(v => total += v.total);
 
-  ventas.forEach(v => ingresos += v.total);
-
-  document.getElementById("gananciaIngresos").textContent = "$" + ingresos;
+  document.getElementById("gananciaIngresos").textContent = "$" + total;
   document.getElementById("gananciaVentas").textContent = ventas.length;
 }
 
-/* ==============================
-📦 PRODUCTOS RAPIDOS
-============================== */
-
-function renderProductosRapidos() {
-  const panel = document.getElementById("panelProductos");
-  if (!panel) return;
-
-  panel.innerHTML = "";
-
-  inventario.slice(0, 20).forEach(p => {
-    const btn = document.createElement("button");
-
-    btn.className = "p-2 border rounded";
-    btn.textContent = `${p.nombre} $${p.precioVenta}`;
-
-    panel.appendChild(btn);
-  });
-}
-
-/* ==============================
-🚀 AUTO LOGIN
-============================== */
+/* =====================================================
+🚀 AUTO START
+===================================================== */
 
 init();
