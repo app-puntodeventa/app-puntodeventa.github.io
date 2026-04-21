@@ -23,6 +23,9 @@ let data = JSON.parse(localStorage.getItem("dataPOS")) || {};
 
 let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
 
+let inventario = (JSON.parse(localStorage.getItem("inventarioPOS")) || [])
+  .map(normalizarProducto);
+
 function normalizarProducto(p) {
   return {
     id: p.id || Date.now(),
