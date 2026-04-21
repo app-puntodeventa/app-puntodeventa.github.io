@@ -365,24 +365,7 @@ if (producto && producto.costo != null) {
 }
   
 
-if (!producto) {
-
-  const nombreNormalizado = normalizar(nombre);
-
-producto = {
-  nombre: nombre.trim(),
-  stock: 0,
-  precioVenta: Number(d.precioUnitario) > 0 ? Number(d.precioUnitario) : null,
-Precio: null,
-  unidad: d.unidad,
-  alias: [nombre]
-};
-
-  // si no hay costo real, dejarlo null para detectar errores
-if (!producto.costo) producto.costo = null;
-  
-  inventario.push(producto);
-} else {
+else {
 
  // 🧠 asegurar stock válido
 if (typeof producto.stock !== "number") {
