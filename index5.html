@@ -28,8 +28,6 @@
     <h2 class="font-bold mb-3">Acceso</h2>
 
    <div class="relative">
-
-     
   <input id="pinInput"
     type="password"
     class="border p-2 w-full text-center pr-10"
@@ -40,7 +38,6 @@
     class="absolute right-2 top-2 text-gray-500">
     <i class="bi bi-eye"></i>
   </button>
-
 </div>
 
     <button id="btnLogin"
@@ -53,29 +50,22 @@
 <!-- HEADER -->
 <header class="flex justify-between items-center bg-blue-600 text-white p-3 shadow">
 
-  <!-- 🧾 Nombre del sistema -->
   <div class="font-bold text-lg">
     APP Punto de venta
   </div>
 
-  <!-- 👤 Usuario actual -->
   <div id="userLabel" class="text-sm opacity-90">
     Sin sesión
   </div>
 
-  <!-- 🧰 Acciones -->
   <div class="flex gap-2">
-
-    <!-- 📲 Instalar app -->
     <button id="btnInstall" class="bg-white text-blue-600 px-3 py-1 rounded text-sm">
       Instalar
     </button>
 
-    <!-- 🚪 Cerrar sesión -->
     <button id="btnLogout" class="bg-red-500 px-3 py-1 rounded text-sm">
       Salir
     </button>
-
   </div>
 
 </header>
@@ -83,27 +73,23 @@
   
 <div class="p-4 flex gap-2">
   <button id="btnNuevaVenta"
-    class="bg-green-600 text-white px-4 py-2 rounded">
-    Nueva venta
+    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition">
+    ✅ Nueva venta
   </button>
 
   <a href="inventario.html"
-    class="bg-blue-600 text-white px-4 py-2 rounded">
-    Inventario
+    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition">
+    📦 Inventario
   </a>
 </div>
 
 <!-- VENTAS -->
 <div id="listaVentas" class="p-4 grid gap-4"></div>
 
-
-
-  <div id="panelGanancias" class="p-4 bg-white shadow rounded m-4 hidden">
-
+<div id="panelGanancias" class="p-4 bg-white shadow rounded m-4 hidden">
   <h2 class="font-bold text-lg mb-2">💰 Ganancias del día</h2>
 
   <div class="grid grid-cols-2 gap-3 text-sm">
-
     <div class="bg-gray-100 p-2 rounded">
       <p class="text-gray-500">Ingresos</p>
       <p id="gananciaIngresos" class="font-bold">$0</p>
@@ -118,15 +104,11 @@
       <p class="text-gray-500">Ventas</p>
       <p id="gananciaVentas" class="font-bold">0</p>
     </div>
-
   </div>
-
 </div>
+
 <!-- FOOTER -->
-
-  <div class="p-4 bg-white shadow-inner flex flex-col gap-3">
-
-  <!-- TOTAL -->
+<div class="p-4 bg-white shadow-inner flex flex-col gap-3">
   <div class="flex justify-between items-center">
     <div>
       <p class="text-sm text-gray-500">Total del día</p>
@@ -134,53 +116,83 @@
     </div>
   </div>
 
-  <!-- BOTONES PDF -->
   <div class="flex gap-2">
     <button id="btnPDF"
-      class="bg-black text-white px-4 py-2 rounded text-sm">
+      class="bg-black text-white px-4 py-2 rounded text-sm hover:bg-gray-800 transition">
       📄 PDF
     </button>
 
     <button id="btnPDFGlobal"
-      class="bg-red-600 text-white px-4 py-2 rounded text-sm font-bold shadow-lg"
+      class="bg-red-600 text-white px-4 py-2 rounded text-sm font-bold shadow-lg hover:bg-red-700 transition"
       style="display:none;">
       📊 PDF GLOBAL
     </button>
   </div>
-
 </div>
 
 <!-- MODAL -->
-<dialog id="modal" class="p-6 rounded-xl w-96 relative">
+<dialog id="modal" class="p-6 rounded-xl w-full max-w-2xl relative">
 
-  <button id="btnCerrar" class="absolute right-3 top-2">✕</button>
+  <button id="btnCerrar" class="absolute right-3 top-2 text-2xl">✕</button>
 
-  <h2 class="font-bold mb-4">🧾 Nueva Venta</h2>
+  <h2 class="font-bold mb-4 text-xl">🧾 Nueva Venta</h2>
 
-  <!-- SELECT INTELIGENTE DE PRODUCTOS -->
-  <div class="mb-4">
-    <label class="block text-sm font-bold mb-2">📦 Producto</label>
-    <select id="selectProducto" class="border p-2 w-full rounded">
-      <option value="">-- Selecciona o escribe --</option>
+  <!-- TABS / MODOS -->
+  <div class="flex gap-2 mb-4 border-b">
+    <button id="tabCatalogo" class="px-4 py-2 border-b-2 border-blue-600 font-bold text-blue-600">
+      📦 Catálogo
+    </button>
+    <button id="tabLibre" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-800">
+      ✍️ Escribir
+    </button>
+  </div>
+
+  <!-- MODO CATÁLOGO -->
+  <div id="modooCatalogo" class="hidden">
+    <label class="block text-sm font-bold mb-2">📦 Selecciona un producto</label>
+    <select id="selectProducto" class="border p-2 w-full rounded mb-3">
+      <option value="">-- Selecciona --</option>
     </select>
+
+    <label class="block text-sm font-bold mb-2">🔢 Cantidad</label>
+    <input id="inputCantidad" type="number" min="1" value="1" class="border p-2 w-full rounded mb-3">
+
+    <p id="previewCatalogo" class="text-blue-500 text-sm mt-2 p-2 bg-blue-50 rounded"></p>
+
+    <button id="btnAgregarCatalogo" class="bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded mt-3 transition">
+      ➕ Agregar
+    </button>
   </div>
 
-  <!-- INPUT PARA BÚSQUEDA Y ENTRADA MANUAL -->
-  <div class="mb-3">
-    <label class="block text-sm font-bold mb-2">🔍 Cantidad | Precio</label>
-    <input id="inputProducto"
-      list="sugerencias"
-      class="border p-2 w-full rounded"
-      placeholder="Ej: 2 | 10 x 5 | 3kg">
+  <!-- MODO LIBRE -->
+  <div id="modoLibre" class="hidden">
+    <label class="block text-sm font-bold mb-2">📝 Producto (ej: huevo, pan)</label>
+    <input id="inputNombreLibre" type="text" class="border p-2 w-full rounded mb-3" placeholder="Nombre del producto">
 
-    <datalist id="sugerencias"></datalist>
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <div>
+        <label class="block text-sm font-bold mb-1">📊 Cantidad</label>
+        <input id="inputCantidadLibre" type="number" min="1" value="1" class="border p-2 w-full rounded">
+      </div>
+      <div>
+        <label class="block text-sm font-bold mb-1">💰 Precio</label>
+        <input id="inputPrecioLibre" type="number" min="0" step="0.01" class="border p-2 w-full rounded">
+      </div>
+    </div>
+
+    <p id="previewLibre" class="text-blue-500 text-sm mt-2 p-2 bg-blue-50 rounded"></p>
+
+    <button id="btnAgregarLibre" class="bg-green-600 hover:bg-green-700 text-white w-full py-2 rounded mt-3 transition">
+      ✨ Agregar Nuevo
+    </button>
   </div>
 
-  <p id="preview" class="text-blue-500 text-sm mt-1 p-2 bg-blue-50 rounded"></p>
-
-  <div id="preVenta" class="mt-4 space-y-2 max-h-40 overflow-y-auto"></div>
-
-  <p class="mt-3 font-bold text-lg">Total: <span id="totalVenta" class="text-green-600">$0</span></p>
+  <!-- CARRITO -->
+  <div class="mt-4 border-t pt-4">
+    <h3 class="font-bold mb-2">🛒 Carrito</h3>
+    <div id="preVenta" class="space-y-2 max-h-40 overflow-y-auto mb-3"></div>
+    <p class="mt-3 font-bold text-lg">Total: <span id="totalVenta" class="text-green-600">$0</span></p>
+  </div>
 
   <button id="btnFinalizar"
     class="bg-red-500 hover:bg-red-600 text-white w-full mt-4 py-2 rounded font-bold transition">
