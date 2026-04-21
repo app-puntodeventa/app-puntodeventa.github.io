@@ -1,16 +1,3 @@
-function normalizarProducto(p) {
-  return {
-    id: p.id || Date.now(),
-    nombre: p.nombre.toLowerCase().trim(),
-    stock: Number(p.stock ?? p.cantidad ?? 0),
-    costo: Number(p.costo ?? 0),
-    precioVenta: Number(p.precioVenta ?? p.precio ?? 0),
-    unidad: p.unidad || "pieza",
-    alias: p.alias || []
-  };
-}
-
-
 // ======================================
 // 🔐 CONFIG / ESTADO GLOBAL
 // ======================================
@@ -20,111 +7,128 @@ let ventaActual = [];
 let totalVenta = 0;
 
 let data = JSON.parse(localStorage.getItem("dataPOS")) || {};
-
 let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
 
+// ======================================
+// 🔧 FUNCIONES UTILIDAD
+// ======================================
+
+/**
+ * Normaliza un producto asegurando tipos de datos correctos
+ */
 function normalizarProducto(p) {
   return {
     id: p.id || Date.now(),
-    nombre: p.nombre.toLowerCase().trim(),
+    nombre: (p.nombre || "").toLowerCase().trim(),
     stock: Number(p.stock ?? p.cantidad ?? 0),
-    costo: Number(p.costo ?? 0),
-    precioVenta: Number(p.precioVenta ?? p.precio ?? 0),
+    costo: p.costo !== null ? Number(p.costo) : null,
+    precioVenta: p.precioVenta ?? p.precio ? Number(p.precioVenta ?? p.precio) : 0,
     unidad: p.unidad || "pieza",
-    alias: p.alias || []
+    alias: Array.isArray(p.alias) ? p.alias : []
   };
 }
 
-
+/**
+ * Normaliza texto para búsquedas
+ */
 function normalizar(texto) {
-  return texto
+  return (texto || "")
     .toLowerCase()
     .trim()
     .replace(/\s+/g, " ")
     .replace(/[^\w\s]/g, "");
 }
 
+/**
+ * Busca un producto en inventario por nombre o alias
+ */
 function buscarProducto(nombre) {
+  if (!nombre || !nombre.trim()) return null;
 
   const n = normalizar(nombre);
 
   return inventario.find(p => {
-
     const nombreBase = normalizar(p.nombre);
 
-    // coincidencia fuerte
-    const coincideNombre =
-      n.includes(nombreBase) ||
-      nombreBase.includes(n);
+    // Coincidencia fuerte por nombre
+    const coincideNombre = n.includes(nombreBase) || nombreBase.includes(n);
 
-    // coincidencia por alias
-    const coincideAlias =
-      (p.alias || []).some(a => {
-        const al = normalizar(a);
-        return n.includes(al) || al.includes(n);
-      });
+    // Coincidencia por alias
+    const coincideAlias = (p.alias || []).some(a => {
+      const al = normalizar(a);
+      return n.includes(al) || al.includes(n);
+    });
 
     return coincideNombre || coincideAlias;
   });
 }
 
+/**
+ * Escapa caracteres HTML para prevenir XSS
+ */
+function escaparHTML(texto) {
+  const map = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  };
+  return (texto || "").replace(/[&<>"']/g, char => map[char]);
+}
 
-// PINs
+// ======================================
+// 🔐 PINs
+// ======================================
+
 const VALID_PINS = {
   "4829": "ADMIN",
   "7391": "TURNO 1",
   "6158": "TURNO 2"
 };
 
-
 // ======================================
-// 🎯 DOM
+// 🎯 ELEMENTOS DOM
 // ======================================
 
 const modal = document.getElementById("modal");
 const input = document.getElementById("inputProducto");
 const preview = document.getElementById("preview");
-
 const totalVentaSpan = document.getElementById("totalVenta");
 const totalDiaSpan = document.getElementById("totalDia");
 const listaVentas = document.getElementById("listaVentas");
 const preVenta = document.getElementById("preVenta");
-
 
 // ======================================
 // 🔐 LOGIN
 // ======================================
 
 document.getElementById("btnLogin").onclick = () => {
+  const pin = document.getElementById("pinInput").value.trim();
 
-  const pin = document.getElementById("pinInput").value;
-
-  if (!VALID_PINS[pin]) return alert("PIN incorrecto");
+  if (!VALID_PINS[pin]) {
+    alert("PIN incorrecto");
+    return;
+  }
 
   const nombreUsuario = VALID_PINS[pin];
-
   usuarioActual = nombreUsuario;
 
-  if (!data[nombreUsuario]) data[nombreUsuario] = { ventas: [] };
+  if (!data[nombreUsuario]) {
+    data[nombreUsuario] = { ventas: [] };
+  }
 
   localStorage.setItem("usuarioActivo", nombreUsuario);
-
   document.getElementById("loginScreen").style.display = "none";
 
   init();
 };
 
-
 // ======================================
-// 🚀 INIT
+// 🚀 INICIALIZACIÓN
 // ======================================
 
 function init() {
-
-  renderProductosRapidos();
-
-  checkInstallStatus();
-
   const user = localStorage.getItem("usuarioActivo");
 
   if (!user) {
@@ -133,40 +137,36 @@ function init() {
   }
 
   usuarioActual = user;
-
-  // 👇 ocultar login correctamente
   document.getElementById("loginScreen").style.display = "none";
-
   document.getElementById("userLabel").textContent = usuarioActual;
 
+  // Mostrar botones solo si es ADMIN
   const btnGlobal = document.getElementById("btnPDFGlobal");
+  const panel = document.getElementById("panelGanancias");
 
   if (btnGlobal) {
     btnGlobal.style.display = usuarioActual === "ADMIN" ? "block" : "none";
   }
+  if (panel) {
+    panel.style.display = usuarioActual === "ADMIN" ? "block" : "none";
+  }
 
+  renderProductosRapidos();
+  checkInstallStatus();
   renderHistorial();
   actualizarTotalDia();
   actualizarSugerencias();
-
-  const panel = document.getElementById("panelGanancias");
-
-if (panel) {
-  panel.style.display = usuarioActual === "ADMIN" ? "block" : "none";
+  actualizarGanancias();
 }
 
-actualizarGanancias();
-
-  
-}
-
+/**
+ * Actualiza la lista de sugerencias del datalist
+ */
 function actualizarSugerencias() {
-
   const datalist = document.getElementById("sugerencias");
   if (!datalist) return;
 
   datalist.innerHTML = "";
-
   inventario.forEach(p => {
     const option = document.createElement("option");
     option.value = p.nombre;
@@ -174,18 +174,17 @@ function actualizarSugerencias() {
   });
 }
 
-
 init();
-
 
 // ======================================
 // 🧠 PARSER INTELIGENTE
 // ======================================
 
+/**
+ * Parsea texto de entrada para extraer cantidad, precio y unidad
+ */
 function parsear(texto) {
-
-  const t = texto.toLowerCase();
-
+  const t = (texto || "").toLowerCase();
   const nums = t.match(/\d+(\.\d+)?/g)?.map(Number) || [];
 
   let cantidad = 1;
@@ -193,40 +192,26 @@ function parsear(texto) {
   let unidad = "pieza";
   let modoLote = false;
 
-  // 🧠 detectar unidad
+  // Detectar unidad
   if (t.includes("kg") || t.includes("kilo")) {
     unidad = "kg";
   } else if (t.includes("pieza") || t.includes("pza")) {
     unidad = "pieza";
   }
 
-  // 🧠 detectar patrones de venta
-  const esMultiplicacion =
-    t.includes(" x ") ||
-    t.includes("cada") ||
-    t.includes("c/u");
-
-  const esPrecioTotal =
-    t.includes("por") ||
-    t.includes("total") ||
-    t.includes("son");
+  // Detectar patrones de venta
+  const esMultiplicacion = t.includes(" x ") || t.includes("cada") || t.includes("c/u");
+  const esPrecioTotal = t.includes("por") || t.includes("total") || t.includes("son");
 
   if (nums.length === 1) {
     precioUnitario = nums[0];
-  }
-
-  if (nums.length >= 2) {
+  } else if (nums.length >= 2) {
     cantidad = nums[0];
     precioUnitario = nums[1];
-
-    if (esMultiplicacion) modoLote = true;
-    else if (esPrecioTotal) modoLote = false;
-    else modoLote = true;
+    modoLote = esMultiplicacion ? true : !esPrecioTotal;
   }
 
-  const subtotal = modoLote
-    ? cantidad * precioUnitario
-    : precioUnitario;
+  const subtotal = modoLote ? cantidad * precioUnitario : precioUnitario;
 
   return {
     texto,
@@ -238,9 +223,11 @@ function parsear(texto) {
   };
 }
 
-
+/**
+ * Extrae el nombre del producto del texto ingresado
+ */
 function extraerNombre(texto) {
-  return texto
+  return (texto || "")
     .toLowerCase()
     .replace(/\d+/g, "")
     .replace(/\b(kilos?|kg|pieza?s?|pzas?|de|a|x|cada|uno|por|pesos?)\b/g, "")
@@ -248,16 +235,13 @@ function extraerNombre(texto) {
     .trim();
 }
 
-
 // ======================================
 // 👀 PREVIEW
 // ======================================
 
 input.addEventListener("input", () => {
-
- 
-
   const v = input.value.trim().toLowerCase();
+
   if (!v) {
     preview.textContent = "";
     actualizarSugerencias();
@@ -265,257 +249,155 @@ input.addEventListener("input", () => {
   }
 
   const d = parsear(v);
+  const nombreDetectado = extraerNombre(v);
+  const productoEncontrado = buscarProducto(nombreDetectado);
 
-// 🔎 detectar producto en inventario
-const nombreDetectado = extraerNombre(v);
+  // Preview inteligente
+  if (productoEncontrado) {
+    preview.textContent = `📦 ${productoEncontrado.nombre} | 💰 Venta: $${productoEncontrado.precioVenta || 0}`;
+  } else if (d.modoLote) {
+    preview.textContent = `${d.cantidad} x ${d.precioUnitario} = $${d.cantidad * d.precioUnitario}`;
+  } else {
+    preview.textContent = "";
+  }
 
-const productoEncontrado = buscarProducto(nombreDetectado);
-
-  // preview inteligente único (sin pisarse)
-if (productoEncontrado) {
-
-preview.textContent =
-  `📦 ${productoEncontrado.nombre} | 💰 Venta: $${productoEncontrado.precioVenta || 0}`;
-
-} else if (d.modoLote) {
-
-  preview.textContent =
-    `${d.cantidad} x ${d.precioUnitario} = $${d.cantidad * d.precioUnitario}`;
-
-} else {
-
-  preview.textContent = "";
-}
-
-  // 🔍 FILTRAR sugerencias inteligentes
+  // Filtrar sugerencias inteligentes
   const datalist = document.getElementById("sugerencias");
   datalist.innerHTML = "";
 
-const n = normalizar(v);
+  const n = normalizar(v);
+  const filtrados = inventario
+    .map(p => {
+      let score = 0;
+      const nombre = normalizar(p.nombre);
 
-const filtrados = inventario
-  .map(p => {
+      if (nombre.includes(n)) score += 3;
+      if (n.includes(nombre)) score += 2;
 
-    let score = 0;
+      (p.alias || []).forEach(a => {
+        const al = normalizar(a);
+        if (al.includes(n) || n.includes(al)) score += 1;
+      });
 
-    const nombre = normalizar(p.nombre);
-
-    // coincidencia directa
-    if (nombre.includes(n)) score += 3;
-    if (n.includes(nombre)) score += 2;
-
-    // coincidencia por alias
-    p.alias?.forEach(a => {
-      const al = normalizar(a);
-      if (al.includes(n) || n.includes(al)) {
-        score += 1;
-      }
-    });
-
-    return { ...p, score };
-  })
-  .filter(p => p.score > 0)
-  .sort((a, b) => b.score - a.score)
-  .slice(0, 5);
+      return { ...p, score };
+    })
+    .filter(p => p.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
 
   filtrados.forEach(p => {
     const option = document.createElement("option");
     option.value = p.nombre;
     datalist.appendChild(option);
   });
-
 });
-
 
 // ======================================
 // ➕ AGREGAR PRODUCTO
 // ======================================
 
 function agregar() {
-
   const v = input.value.trim();
   if (!v) return;
 
   const d = parsear(v);
+  const nombre = extraerNombre(d.texto);
+  let producto = buscarProducto(nombre);
 
-  let subtotal;
+  const subtotal = d.modoLote ? d.cantidad * d.precioUnitario : d.precioUnitario;
 
-if (d.unidad === "kg") {
-  subtotal = d.cantidad * d.precioUnitario;
-} else {
-  subtotal = d.modoLote ? d.cantidad * d.precioUnitario : d.precioUnitario;
-}
-
-const nombre = extraerNombre(d.texto);
-
-let producto = buscarProducto(nombre);
-
-// 🧠 si no existe, se crea automáticamente desde la venta
-
+  // Si no existe, crear automáticamente
   if (!producto) {
-
-producto = {
-  nombre: nombre.trim(),
-  stock: 0,
-  unidad: d.unidad,
-  costo: null,
-  precioVenta: d.precioUnitario,
-  alias: [nombre],
-  creadoDesdeVenta: true
-};
-
-inventario.push(producto);
-
-} else {
-
-  // si existe, solo descuenta stock
-  if (typeof producto.stock !== "number") {
-    producto.stock = d.cantidad;
+    producto = {
+      id: Date.now(),
+      nombre: nombre.trim(),
+      stock: 0,
+      unidad: d.unidad,
+      costo: null,
+      precioVenta: d.precioUnitario,
+      alias: [nombre],
+      creadoDesdeVenta: true
+    };
+    inventario.push(producto);
   } else {
-    producto.stock -= d.cantidad;
+    // Descontar stock solo si existe
+    if (typeof producto.stock === "number") {
+      producto.stock = Math.max(0, producto.stock - d.cantidad);
+    }
+
+    // Confirmar actualización de precio si es diferente
+    if (producto.precioVenta && producto.precioVenta !== d.precioUnitario) {
+      const confirmar = confirm(
+        `¿Actualizar precio de ${producto.nombre} de $${producto.precioVenta} a $${d.precioUnitario}?`
+      );
+      if (confirmar) {
+        producto.precioVenta = d.precioUnitario;
+      }
+    }
+
+    // Agregar alias si no existe
+    const aliasNormal = normalizar(nombre);
+    if (!(producto.alias || []).some(a => normalizar(a) === aliasNormal)) {
+      (producto.alias || []).push(nombre);
+    }
   }
 
-  if (producto.stock < 0) producto.stock = 0;
-}
+  // Limpiar datos antes de guardar
+  inventario = inventario.map(p => normalizarProducto(p));
+  localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
 
-  // 🧠 NORMALIZAR INVENTARIO (unificar stock base)
-// 🧠 asegurar stock válido (única fuente)
-if (typeof producto.stock !== "number") {
-  producto.stock = 0;
-}
-  
-
-let costoBase = 0;
-
-if (producto && producto.costo != null) {
-  costoBase = Number(producto.costo) || 0;
-}
-  
-
-else {
-
- // 🧠 asegurar stock válido
-if (typeof producto.stock !== "number") {
-  producto.stock = 0;
-}
-
-
-
-// 🚫 evitar negativos
-if (producto.stock < 0) {
-  producto.stock = 0;
-}
-
-// 💰 SOLO actualizar precio de venta, NO costo
-// 🔥 SOLO actualizar precio si el usuario lo repite conscientemente
-if (producto.precioVenta && producto.precioVenta !== d.precioUnitario) {
-
-  const confirmar = confirm(
-    `¿Actualizar precio de ${producto.nombre} de $${producto.precioVenta} a $${d.precioUnitario}?`
-  );
-
-  if (confirmar) {
-    producto.precioVenta = d.precioUnitario;
+  // Calcular ganancia solo si hay costo válido
+  let gananciaEstimada = 0;
+  if (producto.costo && producto.costo > 0) {
+    gananciaEstimada = subtotal - (producto.costo * d.cantidad);
   }
 
-}
-
-  // 🧠 agregar alias inteligente
-  const aliasNormal = normalizar(nombre);
-
-  const existeAlias = (producto.alias || []).some(a =>
-    normalizar(a) === aliasNormal
-  );
-
-  if (!existeAlias) {
-    producto.alias.push(nombre);
-  }
-}
-
-// 🔒 limpiar datos corruptos antes de guardar
-inventario = inventario.map(p => ({
-  nombre: p.nombre,
-  stock: Number(p.stock || 0),
-  costo: p.costo !== null ? Number(p.costo) : null,
-  precioVenta: p.precioVenta !== null ? Number(p.precioVenta) : null,
-  unidad: p.unidad || "pieza",
-  alias: p.alias || []
-}));
-
-localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
-
-  renderProductosRapidos();
-  
-const unidades = d.cantidad;
-
-let gananciaEstimada = 0;
-
-// 🧠 solo calcular si hay costo real válido
-if (costoBase > 0) {
-
-  if (d.unidad === "kg") {
-    gananciaEstimada = subtotal - (costoBase * d.cantidad);
-  } else {
-    gananciaEstimada = subtotal - (costoBase * d.cantidad);
-  }
-
-}
-  
-
-ventaActual.push({
-  id: Date.now(),
-  usuario: usuarioActual,
-  texto: d.texto,
-  cantidad: d.cantidad,
-  unidad: d.unidad,
-  precio: d.precioUnitario,
-  multi: d.modoLote,
-  subtotal,
-  costoUnitario: costoBase,
-  ganancia: gananciaEstimada
-});
+  // Agregar a venta actual
+  ventaActual.push({
+    id: Date.now(),
+    usuario: usuarioActual,
+    texto: d.texto,
+    cantidad: d.cantidad,
+    unidad: d.unidad,
+    precio: d.precioUnitario,
+    multi: d.modoLote,
+    subtotal,
+    costoUnitario: producto.costo || 0,
+    ganancia: gananciaEstimada
+  });
 
   totalVenta += subtotal;
-
   actualizarTotalVenta();
 
   input.value = "";
   preview.textContent = "";
-
   renderPreVenta();
+  renderProductosRapidos();
 
   navigator.vibrate?.(30);
 }
 
-
-// ENTER + BOTÓN
 input.addEventListener("keydown", e => {
   if (e.key === "Enter") agregar();
 });
 
 document.getElementById("btnAdd").onclick = agregar;
 
-
 // ======================================
 // 🧾 PREVENTA
 // ======================================
 
 function renderPreVenta() {
-
   preVenta.innerHTML = "";
 
   ventaActual.forEach((item, i) => {
-
     const div = document.createElement("div");
-
     div.className = "flex justify-between bg-gray-100 p-2 rounded items-center";
 
     div.innerHTML = `
-     <span>${escaparHTML(item.texto)}</span>
-
+      <span>${escaparHTML(item.texto)}</span>
       <div class="flex gap-3 items-center">
         <span>$${item.subtotal}</span>
-
         <button class="text-red-500">
           <i class="bi bi-trash"></i>
         </button>
@@ -533,15 +415,11 @@ function renderPreVenta() {
   });
 }
 
-
 // ======================================
 // 💰 FINALIZAR VENTA
 // ======================================
 
 document.getElementById("btnFinalizar").onclick = () => {
-
-  actualizarGanancias();
-
   if (!ventaActual.length) return;
 
   const venta = {
@@ -552,35 +430,28 @@ document.getElementById("btnFinalizar").onclick = () => {
   };
 
   data[usuarioActual].ventas.push(venta);
-
   localStorage.setItem("dataPOS", JSON.stringify(data));
 
   renderVenta(venta);
-
   reset();
   modal.close();
-actualizarTotalDia();
-  
+  actualizarTotalDia();
+  actualizarGanancias();
 };
-
 
 // ======================================
 // 📊 TOTALES
 // ======================================
 
 function actualizarTotalVenta() {
-  totalVentaSpan.textContent = "$" + totalVenta;
+  totalVentaSpan.textContent = "$" + totalVenta.toFixed(2);
 }
 
 function actualizarTotalDia() {
-
   const ventas = data[usuarioActual]?.ventas || [];
-
-  const total = ventas.reduce((a, v) => a + v.total, 0);
-
-  totalDiaSpan.textContent = "$" + total;
+  const total = ventas.reduce((acc, v) => acc + v.total, 0);
+  totalDiaSpan.textContent = "$" + total.toFixed(2);
 }
-
 
 // ======================================
 // 🔄 RESET
@@ -593,93 +464,72 @@ function reset() {
   renderPreVenta();
 }
 
-
 // ======================================
 // 🧾 RENDER VENTA (CARD)
 // ======================================
 
 function renderVenta(v) {
-
   const div = document.createElement("div");
   div.className = "bg-yellow-100 p-4 rounded";
 
-  const itemsHTML = v.items.map(it => `
+  const itemsHTML = v.items
+    .map(
+      it => `
     <div class="flex justify-between text-sm border-b py-1">
       <span>${escaparHTML(it.texto)}</span>
       <span>$${it.subtotal}</span>
     </div>
-  `).join("");
+  `
+    )
+    .join("");
 
   div.innerHTML = `
-    <div class="font-bold text-gray-700 mb-1">🧾 ${v.usuario}</div>
-    <div class="text-xs text-gray-500 mb-2">${v.fecha}</div>
-
-    <div class="bg-white rounded p-2 mb-2">
-      ${itemsHTML}
-    </div>
-
-    <div class="font-bold text-right text-lg">
-      Total: $${v.total}
-    </div>
-
+    <div class="font-bold text-gray-700 mb-1">🧾 ${escaparHTML(v.usuario)}</div>
+    <div class="text-xs text-gray-500 mb-2">${escaparHTML(v.fecha)}</div>
+    <div class="bg-white rounded p-2 mb-2">${itemsHTML}</div>
+    <div class="font-bold text-right text-lg">Total: $${v.total.toFixed(2)}</div>
     <div class="flex gap-3 mt-2">
-      <button class="bg-blue-500 text-white px-3 py-1 rounded">
-        📄 Ticket
-      </button>
-
-      <button class="text-red-500 ml-auto">
-        <i class="bi bi-trash"></i>
-      </button>
+      <button class="bg-blue-500 text-white px-3 py-1 rounded">📄 Ticket</button>
+      <button class="text-red-500 ml-auto"><i class="bi bi-trash"></i></button>
     </div>
   `;
 
-  // 📄 Descargar ticket imagen
+  // Descargar ticket como imagen
   div.querySelector(".bg-blue-500").onclick = () => {
-
-    html2canvas(div, { scale: 2, backgroundColor: "#fff" })
-      .then(canvas => {
-
-        const link = document.createElement("a");
-        link.href = canvas.toDataURL("image/png");
-        link.download = `ticket-${v.usuario}-${Date.now()}.png`;
-        link.click();
-      });
+    html2canvas(div, { scale: 2, backgroundColor: "#fff" }).then(canvas => {
+      const link = document.createElement("a");
+      link.href = canvas.toDataURL("image/png");
+      link.download = `ticket-${usuarioActual}-${Date.now()}.png`;
+      link.click();
+    });
   };
 
-  // 🗑 eliminar venta
+  // Eliminar venta
   div.querySelector(".text-red-500").onclick = () => {
-
-    const arr = data[usuarioActual].ventas;
-    const i = arr.indexOf(v);
-
-    if (i !== -1) {
-      arr.splice(i, 1);
+    const arr = data[usuarioActual]?.ventas || [];
+    const idx = arr.indexOf(v);
+    if (idx !== -1) {
+      arr.splice(idx, 1);
       localStorage.setItem("dataPOS", JSON.stringify(data));
       renderHistorial();
       actualizarTotalDia();
+      actualizarGanancias();
     }
   };
 
   listaVentas.prepend(div);
 }
 
-
 // ======================================
 // 📚 HISTORIAL
 // ======================================
 
 function renderHistorial() {
-
   listaVentas.innerHTML = "";
-
   const ventas = data[usuarioActual]?.ventas || [];
-
   ventas.forEach(renderVenta);
-
-actualizarTotalDia();
-  
+  actualizarTotalDia();
 }
-
 
 // ======================================
 // 🆕 NUEVA VENTA
@@ -690,7 +540,6 @@ document.getElementById("btnNuevaVenta").onclick = () => {
   modal.showModal();
 };
 
-
 // ======================================
 // ❌ CERRAR MODAL
 // ======================================
@@ -699,18 +548,15 @@ document.getElementById("btnCerrar").onclick = () => {
   modal.close();
 };
 
-
 // ======================================
-// 📄 PDF BONITO
+// 📄 PDF REPORTES
 // ======================================
 
 document.getElementById("btnPDF").onclick = () => {
-
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
   const ventas = data[usuarioActual]?.ventas || [];
-
   let y = 10;
   let total = 0;
 
@@ -726,20 +572,18 @@ document.getElementById("btnPDF").onclick = () => {
   y += 8;
 
   ventas.forEach((v, i) => {
-
     doc.setFontSize(12);
     doc.text(`Venta #${i + 1}`, 10, y);
     y += 6;
 
     doc.setFontSize(10);
-
     v.items.forEach(it => {
-      doc.text(`• ${it.texto}   $${it.subtotal}`, 10, y);
+      doc.text(`• ${it.texto} = $${it.subtotal.toFixed(2)}`, 10, y);
       y += 5;
     });
 
     doc.setFontSize(11);
-    doc.text(`Total: $${v.total}`, 10, y);
+    doc.text(`Total: $${v.total.toFixed(2)}`, 10, y);
     y += 8;
 
     doc.line(10, y, 200, y);
@@ -754,29 +598,12 @@ document.getElementById("btnPDF").onclick = () => {
   });
 
   doc.setFontSize(14);
-  doc.text(`TOTAL DEL DÍA: $${total}`, 10, y + 10);
+  doc.text(`TOTAL DEL DÍA: $${total.toFixed(2)}`, 10, y + 10);
 
   doc.save(`reporte-${usuarioActual}.pdf`);
 };
 
-
-
-document.getElementById("btnLogout").onclick = () => {
-
-  localStorage.removeItem("usuarioActivo");
-
-  usuarioActual = null;
-
-  location.reload();
-};
-
-
-
-
-
-
 document.getElementById("btnPDFGlobal").onclick = () => {
-
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
@@ -787,11 +614,8 @@ document.getElementById("btnPDFGlobal").onclick = () => {
   doc.text("REPORTE GLOBAL DE VENTAS", 10, y);
   y += 10;
 
-  // recorrer todos los usuarios
   Object.keys(data).forEach(usuario => {
-
-    const ventas = data[usuario].ventas || [];
-
+    const ventas = data[usuario]?.ventas || [];
     if (!ventas.length) return;
 
     doc.setFontSize(14);
@@ -799,18 +623,17 @@ document.getElementById("btnPDFGlobal").onclick = () => {
     y += 8;
 
     ventas.forEach((v, i) => {
-
       doc.setFontSize(10);
       doc.text(`Venta ${i + 1}`, 10, y);
       y += 6;
 
       v.items.forEach(it => {
-        doc.text(`- ${it.texto} = $${it.subtotal}`, 10, y);
+        doc.text(`- ${it.texto} = $${it.subtotal.toFixed(2)}`, 10, y);
         y += 5;
       });
 
       doc.setFontSize(11);
-      doc.text(`Total: $${v.total}`, 10, y);
+      doc.text(`Total: $${v.total.toFixed(2)}`, 10, y);
       y += 8;
 
       totalGlobal += v.total;
@@ -825,101 +648,26 @@ document.getElementById("btnPDFGlobal").onclick = () => {
   });
 
   doc.setFontSize(14);
-  doc.text(`TOTAL GLOBAL: $${totalGlobal}`, 10, y + 10);
+  doc.text(`TOTAL GLOBAL: $${totalGlobal.toFixed(2)}`, 10, y + 10);
 
   doc.save("reporte-global.pdf");
 };
 
+// ======================================
+// 👤 LOGOUT
+// ======================================
 
-
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js")
-    .then(() => console.log("Service Worker activo"))
-    .catch(err => console.log("Error SW:", err));
-}
-
-
-
-
-
-
-const pinInput = document.getElementById("pinInput");
-const togglePin = document.getElementById("togglePin");
-
-let visible = false;
-
-togglePin.onclick = () => {
-
-  visible = !visible;
-
-  pinInput.type = visible ? "text" : "password";
-
-  togglePin.innerHTML = visible
-    ? '<i class="bi bi-eye-slash"></i>'
-    : '<i class="bi bi-eye"></i>';
+document.getElementById("btnLogout").onclick = () => {
+  localStorage.removeItem("usuarioActivo");
+  usuarioActual = null;
+  location.reload();
 };
 
-
-
-let deferredPrompt;
-
-window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-
-  document.getElementById("btnInstall").style.display = "block";
-});
-
-
-
-
-window.addEventListener("appinstalled", () => {
-  console.log("PWA instalada");
-
-  document.getElementById("btnInstall").style.display = "none";
-});
-
-
-
-document.getElementById("btnInstall").onclick = async () => {
-
-  if (!deferredPrompt) return;
-
-  deferredPrompt.prompt();
-
-  const result = await deferredPrompt.userChoice;
-
-  if (result.outcome === "accepted") {
-    console.log("Instalada");
-  }
-
-  deferredPrompt = null;
-};
-
-
-function checkInstallStatus() {
-
-  const isStandalone = window.matchMedia("(display-mode: standalone)").matches
-    || window.navigator.standalone === true;
-
-  if (isStandalone) {
-    document.getElementById("btnInstall").style.display = "none";
-  }
-}
-
-
-function escaparHTML(texto) {
-  return texto
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
+// ======================================
+// 💰 GANANCIAS (ADMIN)
+// ======================================
 
 function actualizarGanancias() {
-
   if (usuarioActual !== "ADMIN") return;
 
   const ventas = data[usuarioActual]?.ventas || [];
@@ -928,15 +676,12 @@ function actualizarGanancias() {
   let ganancia = 0;
 
   ventas.forEach(v => {
-
     ingresos += v.total;
-
     v.items.forEach(i => {
-      if (i.ganancia) {
+      if (i.ganancia && i.ganancia > 0) {
         ganancia += i.ganancia;
       }
     });
-
   });
 
   const ventasCount = ventas.length;
@@ -945,58 +690,47 @@ function actualizarGanancias() {
   const elGanancia = document.getElementById("gananciaTotal");
   const elVentas = document.getElementById("gananciaVentas");
 
-  if (elIngresos) elIngresos.textContent = `$${ingresos}`;
-  if (elGanancia) elGanancia.textContent = `$${ganancia}`;
+  if (elIngresos) elIngresos.textContent = `$${ingresos.toFixed(2)}`;
+  if (elGanancia) elGanancia.textContent = `$${ganancia.toFixed(2)}`;
   if (elVentas) elVentas.textContent = ventasCount;
 }
 
+// ======================================
+// ⚡ PRODUCTOS RÁPIDOS
+// ======================================
 
 function renderProductosRapidos() {
-
   const panel = document.getElementById("panelProductos");
   if (!panel) return;
 
   panel.innerHTML = "";
 
   inventario.slice(0, 20).forEach(p => {
-
     const btn = document.createElement("button");
-
-    btn.className = "bg-white border rounded p-2 text-left shadow";
+    btn.className = "bg-white border rounded p-2 text-left shadow hover:bg-gray-50";
 
     btn.innerHTML = `
-      <div class="font-bold">${p.nombre}</div>
-      <div class="text-sm text-gray-500">$${p.precioVenta || 0}</div>
+      <div class="font-bold">${escaparHTML(p.nombre)}</div>
+      <div class="text-sm text-gray-500">$${(p.precioVenta || 0).toFixed(2)}</div>
     `;
 
     btn.onclick = () => agregarRapido(p);
-
     panel.appendChild(btn);
   });
 }
 
-
 function agregarRapido(producto) {
-
   const cantidad = 1;
-
   const precio = producto.precioVenta || 0;
-
   const subtotal = cantidad * precio;
 
+  // Descontar stock
+  if (typeof producto.stock === "number") {
+    producto.stock = Math.max(0, producto.stock - 1);
+  }
 
-// descontar stock
-if (typeof producto.stock !== "number") {
-  producto.stock = 0;
-}
+  localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
 
-producto.stock -= 1;
-
-if (producto.stock < 0) producto.stock = 0;
-
-// guardar inventario
-localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
-  
   ventaActual.push({
     id: Date.now(),
     usuario: usuarioActual,
@@ -1007,13 +741,77 @@ localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
     multi: true,
     subtotal,
     costoUnitario: producto.costo || 0,
-    ganancia: 0
+    ganancia: producto.costo && producto.costo > 0 ? subtotal - producto.costo : 0
   });
 
   totalVenta += subtotal;
-
   actualizarTotalVenta();
   renderPreVenta();
+  renderProductosRapidos();
 
   navigator.vibrate?.(30);
+}
+
+// ======================================
+// 📱 PWA
+// ======================================
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker
+    .register("./sw.js")
+    .then(() => console.log("✓ Service Worker activo"))
+    .catch(err => console.log("✗ Error SW:", err));
+}
+
+let deferredPrompt;
+
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById("btnInstall").style.display = "block";
+});
+
+window.addEventListener("appinstalled", () => {
+  console.log("✓ PWA instalada");
+  document.getElementById("btnInstall").style.display = "none";
+});
+
+document.getElementById("btnInstall").onclick = async () => {
+  if (!deferredPrompt) return;
+
+  deferredPrompt.prompt();
+  const result = await deferredPrompt.userChoice;
+
+  if (result.outcome === "accepted") {
+    console.log("✓ Instalada correctamente");
+  }
+
+  deferredPrompt = null;
+};
+
+function checkInstallStatus() {
+  const isStandalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true;
+
+  if (isStandalone) {
+    document.getElementById("btnInstall").style.display = "none";
+  }
+}
+
+// ======================================
+// 🔐 PIN VISIBILITY
+// ======================================
+
+const pinInput = document.getElementById("pinInput");
+const togglePin = document.getElementById("togglePin");
+
+let visible = false;
+
+if (togglePin) {
+  togglePin.onclick = () => {
+    visible = !visible;
+    pinInput.type = visible ? "text" : "password";
+    togglePin.innerHTML = visible ? '<i class="bi bi-eye-slash"></i>' : '<i class="bi bi-eye"></i>';
+  };
 }
