@@ -433,6 +433,8 @@ function renderPreVenta() {
 
 document.getElementById("btnFinalizar").onclick = () => {
 
+  actualizarGanancias();
+
   if (!ventaActual.length) return;
 
   const venta = {
