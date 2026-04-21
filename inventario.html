@@ -102,7 +102,9 @@ document.getElementById("btnGuardar").onclick = () => {
 
   if (!nombre) return alert("Escribe un producto");
 
-  const existente = inventario.find(p => p.nombre === nombre);
+  const existente = inventario.find(p =>
+  p.nombre.trim().toLowerCase() === nombre
+);
 
   if (existente) {
     existente.cantidad += cantidad;
