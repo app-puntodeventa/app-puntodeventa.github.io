@@ -351,10 +351,9 @@ producto = {
 }
 
   // 🧠 NORMALIZAR INVENTARIO (unificar stock base)
-if (producto) {
-  if (typeof producto.cantidad !== "number") {
-    producto.cantidad = producto.stock || 0;
-  }
+// 🧠 asegurar stock válido (única fuente)
+if (typeof producto.stock !== "number") {
+  producto.stock = 0;
 }
   
 
