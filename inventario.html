@@ -111,9 +111,11 @@ const lista = document.getElementById("listaInventario");
 
 document.getElementById("btnGuardar").onclick = () => {
 
-  const nombre = document.getElementById("invNombre").value.toLowerCase().trim();
-  const cantidad = Number(document.getElementById("invCantidad").value);
-  const costo = Number(document.getElementById("invCosto").value);
+ const nombre = document.getElementById("invNombre").value.toLowerCase().trim();
+const cantidad = Number(document.getElementById("invCantidad").value);
+const costo = Number(document.getElementById("invCosto").value);
+const precio = Number(document.getElementById("invPrecio").value);
+const unidad = document.getElementById("invUnidad").value;
 
   if (!nombre) return alert("Escribe un producto");
 
@@ -121,16 +123,21 @@ document.getElementById("btnGuardar").onclick = () => {
   p.nombre.trim().toLowerCase() === nombre
 );
 
-  if (existente) {
-    existente.cantidad += cantidad;
-    if (costo) existente.costo = costo;
-  } else {
-    inventario.push({
-      nombre,
-      cantidad,
-      costo,
-      alias: []
-    });
+ if (existente) {
+  existente.cantidad += cantidad;
+
+  if (costo) existente.costo = costo;
+  if (precio) existente.precio = precio;
+  if (unidad) existente.unidad = unidad;
+} else {
+   inventario.push({
+  nombre,
+  cantidad,
+  costo,
+  precio,
+  unidad,
+  alias: []
+});
   }
 
   guardar();
