@@ -309,7 +309,13 @@ function agregar() {
 
   const d = parsear(v);
 
-  const subtotal = d.multi ? d.cantidad * d.precio : d.precio;
+  let subtotal;
+
+if (d.unidad === "kg") {
+  subtotal = d.cantidad * d.precio;
+} else {
+  subtotal = d.multi ? d.cantidad * d.precio : d.precio;
+}
 
 const nombre = extraerNombre(d.texto);
 
@@ -354,7 +360,11 @@ if (typeof producto.stock !== "number") {
 }
 
 // 📉 descontar inventario correctamente
-producto.stock -= d.cantidad;
+if (d.unidad === "kg") {
+  producto.stock -= d.cantidad; // stock en kg
+} else {
+  producto.stock -= d.cantidad; // piezas igual
+}
 
 // 🚫 evitar negativos
 if (producto.stock < 0) {
