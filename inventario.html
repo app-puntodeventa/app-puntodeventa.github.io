@@ -1,25 +1,202 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Inventario</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Inventario</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<link rel="manifest" href="manifest.json">
+
+<meta name="theme-color" content="#111827">
+
 </head>
 
-<body class="p-4 bg-gray-100">
+<body class="bg-gray-100 min-h-screen flex flex-col">
 
-<h1 class="text-xl font-bold mb-4">Inventario</h1>
+<!-- HEADER -->
+<header class="flex justify-between items-center bg-blue-600 text-white p-3 shadow">
 
-<div class="flex gap-2 mb-4">
-  <input id="invNombre" class="border p-2 w-full" placeholder="Producto">
-  <input id="invCantidad" class="border p-2 w-24" placeholder="Cant">
-  <input id="invCosto" class="border p-2 w-24" placeholder="Costo">
-  <button id="btnGuardar" class="bg-blue-600 text-white px-4">Guardar</button>
+  <div class="font-bold text-lg">
+    📦 Inventario
+  </div>
+
+  <a href="index5.html"
+    class="bg-white text-blue-600 px-3 py-1 rounded text-sm flex items-center gap-1">
+    <i class="bi bi-arrow-left"></i>
+    Volver
+  </a>
+
+</header>
+
+<!-- CONTENIDO -->
+<div class="p-4 flex flex-col gap-4 flex-1">
+
+  <!-- FORM -->
+  <div class="bg-white p-4 rounded shadow flex flex-col gap-3">
+
+    <input id="invNombre"
+      class="border p-2 rounded"
+      placeholder="Producto (ej: huevo, lápiz)">
+
+    <div class="flex gap-2">
+      <input id="invCantidad"
+        type="number"
+        class="border p-2 rounded w-1/2"
+        placeholder="Cantidad">
+
+      <input id="invCosto"
+        type="number"
+        class="border p-2 rounded w-1/2"
+        placeholder="Costo">
+    </div>
+
+    <button id="btnGuardar"
+      class="bg-blue-600 text-white py-2 rounded">
+      ➕ Guardar producto
+    </button>
+
+  </div>
+
+  <!-- LISTA -->
+  <div id="listaInventario" class="space-y-2"></div>
+
 </div>
 
-<div id="listaInventario" class="space-y-2"></div>
+<script>
+let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
 
-<script src="inventario.js"></script>
+const lista = document.getElementById("listaInventario");
+
+document.getElementById("btnGuardar").onclick = () => {
+
+  const nombre = document.getElementById("invNombre").value.toLowerCase().trim();
+  const cantidad = Number(document.getElementById("invCantidad").value);
+  const costo = Number(document.getElementById("invCosto").value);
+
+  if (!nombre) return alert("Escribe un producto");
+
+  const existente = inventario.find(p => p.nombre === nombre);
+
+  if (existente) {
+    existente.cantidad += cantidad;
+    if (costo) existente.costo = costo;
+  } else {
+    inventario.push({
+      nombre,
+      cantidad,
+      costo,
+      alias: []
+    });
+  }
+
+  guardar();
+  limpiar();
+  render();
+};
+
+// =======================
+// 💾 GUARDAR
+// =======================
+function guardar() {
+  localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
+}
+
+// =======================
+// 🧹 LIMPIAR FORM
+// =======================
+function limpiar() {
+  document.getElementById("invNombre").value = "";
+  document.getElementById("invCantidad").value = "";
+  document.getElementById("invCosto").value = "";
+}
+
+// =======================
+// 🎨 COLOR POR STOCK
+// =======================
+function colorStock(cantidad) {
+  if (cantidad <= 0) return "bg-red-200";
+  if (cantidad < 5) return "bg-yellow-200";
+  return "bg-green-100";
+}
+
+// =======================
+// 🧾 RENDER
+// =======================
+function render() {
+
+  lista.innerHTML = "";
+
+  inventario.forEach((p, i) => {
+
+    const div = document.createElement("div");
+
+    div.className = `p-3 rounded shadow flex flex-col gap-2 ${colorStock(p.cantidad)}`;
+
+    div.innerHTML = `
+      <div class="flex justify-between items-center">
+
+        <input value="${p.nombre}"
+          class="font-bold bg-transparent border-b w-full mr-2">
+
+        <button class="text-red-500">
+          <i class="bi bi-trash"></i>
+        </button>
+
+      </div>
+
+      <div class="flex gap-2">
+
+        <input type="number" value="${p.cantidad}"
+          class="border p-1 rounded w-1/2">
+
+        <input type="number" value="${p.costo}"
+          class="border p-1 rounded w-1/2">
+
+      </div>
+    `;
+
+    const inputs = div.querySelectorAll("input");
+
+    // ✏️ editar nombre
+    inputs[0].onchange = (e) => {
+      p.nombre = e.target.value.toLowerCase();
+      guardar();
+    };
+
+    // ✏️ editar cantidad
+    inputs[1].onchange = (e) => {
+      p.cantidad = Number(e.target.value);
+      guardar();
+      render();
+    };
+
+    // ✏️ editar costo
+    inputs[2].onchange = (e) => {
+      p.costo = Number(e.target.value);
+      guardar();
+    };
+
+    // 🗑 eliminar
+    div.querySelector("button").onclick = () => {
+
+      if (!confirm("¿Eliminar producto?")) return;
+
+      inventario.splice(i, 1);
+      guardar();
+      render();
+    };
+
+    lista.appendChild(div);
+  });
+}
+
+render();
+</script>
 
 </body>
 </html>
