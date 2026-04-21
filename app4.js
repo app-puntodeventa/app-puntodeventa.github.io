@@ -39,3 +39,19 @@ const APP4 = {
     });
   }
 };
+
+
+
+document.getElementById("btnLogin").onclick = () =>
+  AUTH4.login(document.getElementById("pinInput").value);
+
+document.getElementById("btnAdd").onclick = () =>
+  SALES4.add(document.getElementById("saleInput").value);
+
+document.getElementById("btnFinish").onclick = () =>
+  SALES4.finish();
+
+document.getElementById("fileExcel").onchange = e =>
+  importExcel(e.target.files[0]);
+
+document.getElementById("exportExcel").onclick = exportExcel;
