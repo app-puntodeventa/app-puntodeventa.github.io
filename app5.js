@@ -300,6 +300,14 @@ const nombre = extraerNombre(d.texto);
 
 let producto = buscarProducto(nombre);
 
+  // 🧠 NORMALIZAR INVENTARIO (unificar stock base)
+if (producto) {
+  if (typeof producto.cantidad !== "number") {
+    producto.cantidad = producto.stock || 0;
+  }
+}
+  
+
 let costoBase = 0;
 
 if (producto && producto.costo != null) {
