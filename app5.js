@@ -1,5 +1,3 @@
-let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
-
 
 // ======================================
 // 🔐 CONFIG / ESTADO GLOBAL
@@ -10,6 +8,9 @@ let ventaActual = [];
 let totalVenta = 0;
 
 let data = JSON.parse(localStorage.getItem("dataPOS")) || {};
+
+let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
+
 
 // PINs
 const VALID_PINS = {
@@ -89,7 +90,24 @@ if (usuarioActual === "ADMIN") {
 
   renderHistorial();
   actualizarTotalDia();
+actualizarSugerencias();
+  
 }
+
+function actualizarSugerencias() {
+
+  const datalist = document.getElementById("sugerencias");
+  if (!datalist) return;
+
+  datalist.innerHTML = "";
+
+  inventario.forEach(p => {
+    const option = document.createElement("option");
+    option.value = p.nombre;
+    datalist.appendChild(option);
+  });
+}
+
 
 init();
 
@@ -142,7 +160,7 @@ function extraerNombre(texto) {
   return texto
     .toLowerCase()
     .replace(/\d+/g, "")
-    .replace(/kilos?|kg|pieza?s?|de|a|x|cada|uno|por/g, "")
+    .replace(/kilos?|kg|pieza?s?|pzas?|de|a|x|cada|uno|por|pesos?/g, "")
     .trim();
 }
 
@@ -153,14 +171,37 @@ function extraerNombre(texto) {
 
 input.addEventListener("input", () => {
 
-  const v = input.value.trim();
-  if (!v) return preview.textContent = "";
+  const v = input.value.trim().toLowerCase();
+  if (!v) {
+    preview.textContent = "";
+    actualizarSugerencias();
+    return;
+  }
 
   const d = parsear(v);
 
-  if (!d.multi) return preview.textContent = "";
+  // preview precio
+  if (d.multi) {
+    preview.textContent = `${d.cantidad} x ${d.precio} = $${d.cantidad * d.precio}`;
+  } else {
+    preview.textContent = "";
+  }
 
-  preview.textContent = `${d.cantidad} x ${d.precio} = $${d.cantidad * d.precio}`;
+  // 🔍 FILTRAR sugerencias inteligentes
+  const datalist = document.getElementById("sugerencias");
+  datalist.innerHTML = "";
+
+  const filtrados = inventario.filter(p =>
+    v.includes(p.nombre) ||
+    p.alias?.some(a => v.includes(a))
+  );
+
+  filtrados.forEach(p => {
+    const option = document.createElement("option");
+    option.value = p.nombre;
+    datalist.appendChild(option);
+  });
+
 });
 
 
@@ -176,7 +217,6 @@ function agregar() {
   const d = parsear(v);
 
   const subtotal = d.multi ? d.cantidad * d.precio : d.precio;
-
 
 const nombre = extraerNombre(d.texto);
 
@@ -198,12 +238,15 @@ if (!producto) {
 
 } else {
 
-  producto.cantidad -= d.cantidad;
+  // ⚠️ evitar negativos extremos
+  producto.cantidad = (producto.cantidad || 0) - d.cantidad;
 
+  // actualizar costo si viene uno válido
   if (d.precio > 0) {
     producto.costo = d.precio;
   }
 
+  // guardar alias nuevos
   if (!producto.alias.includes(nombre)) {
     producto.alias.push(nombre);
   }
