@@ -331,7 +331,7 @@ producto = {
   nombre: nombre.trim(),
   stock: 0,
   unidad: d.unidad,
-  costo: null,
+  Precio: null,
   precioVenta: d.precioUnitario,
   alias: [nombre],
   creadoDesdeVenta: true
@@ -373,7 +373,7 @@ producto = {
   nombre: nombre.trim(),
   stock: 0,
   precioVenta: Number(d.precioUnitario) > 0 ? Number(d.precioUnitario) : null,
-costo: null,
+Precio: null,
   unidad: d.unidad,
   alias: [nombre]
 };
@@ -431,7 +431,7 @@ if (producto.precioVenta && producto.precioVenta !== d.precioUnitario) {
 inventario = inventario.map(p => ({
   nombre: p.nombre,
   stock: Number(p.stock || 0),
-  costo: p.costo !== null ? Number(p.costo) : null,
+  Precio: p.costo !== null ? Number(p.costo) : null,
   precioVenta: p.precioVenta !== null ? Number(p.precioVenta) : null,
   unidad: p.unidad || "pieza",
   alias: p.alias || []
@@ -460,7 +460,7 @@ ventaActual.push({
   usuario: usuarioActual,
   texto: d.texto,
   cantidad: d.cantidad,
-  unidad: "pieza",
+  unidad: d.unidad,
   precio: d.precioUnitario,
   multi: d.modoLote,
   subtotal,
