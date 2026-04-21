@@ -79,7 +79,6 @@ function escaparHTML(texto) {
 
 /**
  * 🔑 SINCRONIZA INVENTARIO CON LOCALSTORAGE
- * Se ejecuta cada vez que hay cambios
  */
 function sincronizarInventario() {
   inventario = inventario.map(p => normalizarProducto(p));
@@ -89,7 +88,7 @@ function sincronizarInventario() {
 
 /**
  * 🆕 AGREGAR O ACTUALIZAR PRODUCTO EN INVENTARIO
- * Este es el corazón del sistema: la venta rápida alimenta el inventario
+ * SIN ACTUALIZAR AUTOMÁTICAMENTE EL PRECIO
  */
 function actualizarProductoInventario(nombre, precioVenta, unidad = "pieza", cantidad = 0) {
   const nombreNormalizado = nombre.toLowerCase().trim();
@@ -97,11 +96,8 @@ function actualizarProductoInventario(nombre, precioVenta, unidad = "pieza", can
   let producto = buscarProducto(nombreNormalizado);
 
   if (producto) {
-    // Producto existe: actualizar precio si es diferente
-    if (precioVenta > 0 && producto.precioVenta !== precioVenta) {
-      console.log(`📝 Actualizando precio de "${producto.nombre}": $${producto.precioVenta} → $${precioVenta}`);
-      producto.precioVenta = precioVenta;
-    }
+    // Producto existe: NO actualizar precio automáticamente
+    console.log(`📦 Producto encontrado: "${producto.nombre}"`);
 
     // Agregar alias si no existe
     const aliasNormal = normalizar(nombreNormalizado);
@@ -120,7 +116,7 @@ function actualizarProductoInventario(nombre, precioVenta, unidad = "pieza", can
       id: Date.now(),
       nombre: nombreNormalizado,
       stock: cantidad || 0,
-      costo: null, // El usuario lo agregará manualmente en inventario.html
+      costo: null,
       precioVenta: precioVenta || 0,
       unidad: unidad || "pieza",
       alias: [nombreNormalizado],
@@ -149,6 +145,7 @@ const VALID_PINS = {
 // ======================================
 
 const modal = document.getElementById("modal");
+const selectProducto = document.getElementById("selectProducto");
 const input = document.getElementById("inputProducto");
 const preview = document.getElementById("preview");
 const totalVentaSpan = document.getElementById("totalVenta");
@@ -208,12 +205,32 @@ function init() {
     panel.style.display = usuarioActual === "ADMIN" ? "block" : "none";
   }
 
-  renderProductosRapidos();
   checkInstallStatus();
   renderHistorial();
   actualizarTotalDia();
   actualizarSugerencias();
+  actualizarSelectProductos();
   actualizarGanancias();
+}
+
+/**
+ * 🆕 ACTUALIZAR SELECT DE PRODUCTOS
+ */
+function actualizarSelectProductos() {
+  if (!selectProducto) return;
+
+  const opcionesExistentes = selectProducto.querySelectorAll("option:not(:first-child)");
+  opcionesExistentes.forEach(opt => opt.remove());
+
+  // Agrupar por primera letra para mejor organización
+  const productosOrdenados = [...inventario].sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+  productosOrdenados.forEach(p => {
+    const option = document.createElement("option");
+    option.value = p.nombre;
+    option.textContent = `${p.nombre.toUpperCase()} - $${(p.precioVenta || 0).toFixed(2)} (${p.stock || 0})`;
+    selectProducto.appendChild(option);
+  });
 }
 
 /**
@@ -310,63 +327,65 @@ function extraerNombre(texto) {
 }
 
 // ======================================
-// 👀 PREVIEW
+// 👀 PREVIEW Y EVENTOS
 // ======================================
 
+/**
+ * Cuando selecciona producto del SELECT
+ */
+selectProducto.addEventListener("change", () => {
+  const nombreSeleccionado = selectProducto.value;
+  
+  if (!nombreSeleccionado) {
+    input.value = "";
+    preview.textContent = "";
+    return;
+  }
+
+  const producto = buscarProducto(nombreSeleccionado);
+  
+  if (producto) {
+    const stock = producto.stock > 0 ? `(${producto.stock} en stock)` : "(sin stock)";
+    preview.innerHTML = `
+      <div class="flex justify-between items-center">
+        <span>📦 ${producto.nombre} - $${(producto.precioVenta || 0).toFixed(2)}</span>
+        <span class="text-xs">${stock}</span>
+      </div>
+    `;
+    
+    // Auto-llenar cantidad en el input
+    input.value = "1";
+    input.focus();
+  }
+});
+
+/**
+ * Cuando escribe en el input de cantidad/precio
+ */
 input.addEventListener("input", () => {
   const v = input.value.trim().toLowerCase();
-
-  if (!v) {
+  
+  if (!v || selectProducto.value === "") {
     preview.textContent = "";
-    actualizarSugerencias();
     return;
   }
 
   const d = parsear(v);
-  const nombreDetectado = extraerNombre(v);
-  const productoEncontrado = buscarProducto(nombreDetectado);
 
-  // Preview inteligente
-  if (productoEncontrado) {
-    const stock = productoEncontrado.stock > 0 ? `(${productoEncontrado.stock} en stock)` : "(sin stock)";
-    preview.textContent = `📦 ${productoEncontrado.nombre} | 💰 $${productoEncontrado.precioVenta || 0} ${stock}`;
-  } else if (d.modoLote) {
-    preview.textContent = `${d.cantidad} x ${d.precioUnitario} = $${(d.cantidad * d.precioUnitario).toFixed(2)}`;
-  } else if (d.precioUnitario > 0) {
-    preview.textContent = `🆕 Nuevo: ${nombreDetectado || "producto"} por $${d.precioUnitario}`;
-  } else {
-    preview.textContent = "";
+  if (d.precioUnitario > 0) {
+    const nombreSeleccionado = selectProducto.value;
+    const producto = buscarProducto(nombreSeleccionado);
+
+    if (producto) {
+      const totalCalc = d.cantidad * d.precioUnitario;
+      preview.innerHTML = `
+        <div class="flex justify-between">
+          <span>${d.cantidad} × ${producto.nombre}</span>
+          <span class="font-bold">$${totalCalc.toFixed(2)}</span>
+        </div>
+      `;
+    }
   }
-
-  // Filtrar sugerencias inteligentes
-  const datalist = document.getElementById("sugerencias");
-  datalist.innerHTML = "";
-
-  const n = normalizar(v);
-  const filtrados = inventario
-    .map(p => {
-      let score = 0;
-      const nombre = normalizar(p.nombre);
-
-      if (nombre.includes(n)) score += 3;
-      if (n.includes(nombre)) score += 2;
-
-      (p.alias || []).forEach(a => {
-        const al = normalizar(a);
-        if (al.includes(n) || n.includes(al)) score += 1;
-      });
-
-      return { ...p, score };
-    })
-    .filter(p => p.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 8);
-
-  filtrados.forEach(p => {
-    const option = document.createElement("option");
-    option.value = p.nombre;
-    datalist.appendChild(option);
-  });
 });
 
 // ======================================
@@ -374,42 +393,80 @@ input.addEventListener("input", () => {
 // ======================================
 
 function agregar() {
-  const v = input.value.trim();
-  if (!v) return;
-
-  const d = parsear(v);
-  const nombre = extraerNombre(d.texto);
+  const nombreSeleccionado = selectProducto.value;
   
-  if (!nombre) {
-    alert("No se pudo extraer el nombre del producto");
+  if (!nombreSeleccionado) {
+    alert("❌ Selecciona un producto primero");
     return;
   }
 
-  const subtotal = d.modoLote ? d.cantidad * d.precioUnitario : d.precioUnitario;
+  const cantidadInput = input.value.trim();
+  
+  if (!cantidadInput) {
+    alert("❌ Ingresa cantidad o precio");
+    return;
+  }
 
-  // 🔑 ACTUALIZAR INVENTARIO (AQUÍ ES LA MAGIA)
-  const producto = actualizarProductoInventario(
-    nombre,
-    d.precioUnitario,
-    d.unidad,
-    0 // No incrementamos stock desde venta rápida
-  );
+  const d = parsear(cantidadInput);
+  
+  if (d.precioUnitario <= 0 && d.cantidad <= 0) {
+    alert("❌ Valores inválidos");
+    return;
+  }
+
+  const producto = buscarProducto(nombreSeleccionado);
+  
+  if (!producto) {
+    alert("❌ Producto no encontrado");
+    return;
+  }
+
+  // Usar el precio del producto del inventario si no especificó precio
+  let precioFinal = d.precioUnitario > 0 ? d.precioUnitario : (producto.precioVenta || 0);
+  let cantidadFinal = d.cantidad > 0 ? d.cantidad : 1;
+  const subtotal = cantidadFinal * precioFinal;
+
+  // 🆕 PREGUNTAR SI DESEA ACTUALIZAR PRECIO
+  if (d.precioUnitario > 0 && producto.precioVenta > 0 && producto.precioVenta !== d.precioUnitario) {
+    const confirmar = confirm(
+      `⚠️ El precio de "${producto.nombre}" en inventario es $${producto.precioVenta.toFixed(2)}\n\n¿Deseas actualizarlo a $${d.precioUnitario.toFixed(2)}?\n\nSí = Actualizar\nNo = Usar precio anterior`
+    );
+
+    if (confirmar) {
+      producto.precioVenta = d.precioUnitario;
+      sincronizarInventario();
+      actualizarSelectProductos();
+      console.log(`✅ Precio actualizado: $${producto.precioVenta}`);
+    } else {
+      precioFinal = producto.precioVenta;
+    }
+  }
+
+  // Si es nuevo producto pero ingresó precio, agregarlo
+  if (producto.precioVenta === 0 && d.precioUnitario > 0) {
+    actualizarProductoInventario(
+      nombreSeleccionado,
+      d.precioUnitario,
+      producto.unidad,
+      0
+    );
+  }
 
   // Calcular ganancia solo si hay costo válido
   let gananciaEstimada = 0;
   if (producto.costo && producto.costo > 0) {
-    gananciaEstimada = subtotal - (producto.costo * d.cantidad);
+    gananciaEstimada = subtotal - (producto.costo * cantidadFinal);
   }
 
   // Agregar a venta actual
   ventaActual.push({
     id: Date.now(),
     usuario: usuarioActual,
-    texto: d.texto,
-    cantidad: d.cantidad,
-    unidad: d.unidad,
-    precio: d.precioUnitario,
-    multi: d.modoLote,
+    texto: `${cantidadFinal} ${producto.unidad || "pieza"} ${producto.nombre}`,
+    cantidad: cantidadFinal,
+    unidad: producto.unidad || "pieza",
+    precio: precioFinal,
+    multi: true,
     subtotal,
     costoUnitario: producto.costo || 0,
     ganancia: gananciaEstimada
@@ -418,11 +475,13 @@ function agregar() {
   totalVenta += subtotal;
   actualizarTotalVenta();
 
+  // Limpiar
+  selectProducto.value = "";
   input.value = "";
   preview.textContent = "";
+  
   renderPreVenta();
-  renderProductosRapidos();
-  actualizarSugerencias(); // Actualizar sugerencias con nuevo producto
+  actualizarSelectProductos();
 
   navigator.vibrate?.(30);
 }
@@ -431,7 +490,17 @@ input.addEventListener("keydown", e => {
   if (e.key === "Enter") agregar();
 });
 
-document.getElementById("btnAdd").onclick = agregar;
+// Crear botón de agregar si no existe
+let btnAdd = document.getElementById("btnAdd");
+if (!btnAdd) {
+  btnAdd = document.createElement("button");
+  btnAdd.id = "btnAdd";
+  btnAdd.className = "bg-green-500 text-white px-3 py-2 rounded hidden md:block";
+  btnAdd.innerHTML = "<i class='bi bi-plus-lg'></i>";
+  input.parentElement.appendChild(btnAdd);
+}
+
+btnAdd.onclick = agregar;
 
 // ======================================
 // 🧾 PREVENTA
@@ -440,15 +509,20 @@ document.getElementById("btnAdd").onclick = agregar;
 function renderPreVenta() {
   preVenta.innerHTML = "";
 
+  if (ventaActual.length === 0) {
+    preVenta.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">Sin productos</p>';
+    return;
+  }
+
   ventaActual.forEach((item, i) => {
     const div = document.createElement("div");
-    div.className = "flex justify-between bg-gray-100 p-2 rounded items-center";
+    div.className = "flex justify-between bg-gray-50 p-2 rounded items-center border border-gray-200";
 
     div.innerHTML = `
-      <span>${escaparHTML(item.texto)}</span>
-      <div class="flex gap-3 items-center">
-        <span>$${item.subtotal.toFixed(2)}</span>
-        <button class="text-red-500">
+      <span class="text-sm">${escaparHTML(item.texto)}</span>
+      <div class="flex gap-2 items-center">
+        <span class="font-bold">$${item.subtotal.toFixed(2)}</span>
+        <button class="text-red-500 text-sm p-1 hover:bg-red-100 rounded transition">
           <i class="bi bi-trash"></i>
         </button>
       </div>
@@ -474,12 +548,12 @@ document.getElementById("btnFinalizar").onclick = () => {
   console.log("ventaActual:", ventaActual);
 
   if (!ventaActual || ventaActual.length === 0) {
-    alert("No hay productos en la venta");
+    alert("❌ No hay productos en la venta");
     return;
   }
 
   if (!usuarioActual) {
-    alert("No hay usuario activo");
+    alert("❌ No hay usuario activo");
     return;
   }
 
@@ -552,6 +626,9 @@ function reset() {
   totalVenta = 0;
   actualizarTotalVenta();
   renderPreVenta();
+  selectProducto.value = "";
+  input.value = "";
+  preview.textContent = "";
 }
 
 // ======================================
@@ -560,7 +637,7 @@ function reset() {
 
 function renderVenta(v) {
   const div = document.createElement("div");
-  div.className = "bg-yellow-100 p-4 rounded";
+  div.className = "bg-yellow-100 p-4 rounded border-l-4 border-yellow-400";
 
   const itemsHTML = v.items
     .map(
@@ -577,10 +654,10 @@ function renderVenta(v) {
     <div class="font-bold text-gray-700 mb-1">🧾 ${escaparHTML(v.usuario)}</div>
     <div class="text-xs text-gray-500 mb-2">${escaparHTML(v.fecha)}</div>
     <div class="bg-white rounded p-2 mb-2">${itemsHTML}</div>
-    <div class="font-bold text-right text-lg">Total: $${(v.total || 0).toFixed(2)}</div>
-    <div class="flex gap-3 mt-2">
-      <button class="bg-blue-500 text-white px-3 py-1 rounded text-sm">📄 Ticket</button>
-      <button class="text-red-500 ml-auto"><i class="bi bi-trash"></i></button>
+    <div class="font-bold text-right text-lg text-green-600">Total: $${(v.total || 0).toFixed(2)}</div>
+    <div class="flex gap-3 mt-3">
+      <button class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition">📄 Ticket</button>
+      <button class="text-red-500 ml-auto hover:bg-red-100 p-1 rounded transition"><i class="bi bi-trash"></i></button>
     </div>
   `;
 
@@ -636,7 +713,7 @@ function renderHistorial() {
   const ventas = data[usuarioActual].ventas || [];
   
   if (ventas.length === 0) {
-    listaVentas.innerHTML = '<p class="p-4 text-gray-500">Sin ventas</p>';
+    listaVentas.innerHTML = '<p class="p-4 text-gray-500 text-center">Sin ventas registradas</p>';
     return;
   }
 
@@ -651,7 +728,7 @@ function renderHistorial() {
 document.getElementById("btnNuevaVenta").onclick = () => {
   reset();
   modal.showModal();
-  input.focus();
+  selectProducto.focus();
 };
 
 // ======================================
@@ -829,80 +906,6 @@ function actualizarGanancias() {
 }
 
 // ======================================
-// ⚡ PRODUCTOS RÁPIDOS
-// ======================================
-
-function renderProductosRapidos() {
-  const panel = document.getElementById("panelProductos");
-  if (!panel) return;
-
-  panel.innerHTML = "";
-
-  if (!inventario || inventario.length === 0) {
-    panel.innerHTML = '<p class="text-gray-400 text-xs col-span-2">Sin productos</p>';
-    return;
-  }
-
-  // Mostrar productos ordenados por uso reciente (últimos vendidos)
-  inventario.slice(0, 20).forEach(p => {
-    const btn = document.createElement("button");
-    btn.className = "bg-white border rounded p-2 text-left shadow hover:bg-gray-50 transition";
-    btn.type = "button";
-
-    const stockInfo = p.stock > 0 ? `(${p.stock})` : "(sin stock)";
-    const stockColor = p.stock > 0 ? "text-gray-500" : "text-red-500";
-
-    btn.innerHTML = `
-      <div class="font-bold text-sm">${escaparHTML(p.nombre)}</div>
-      <div class="flex justify-between">
-        <span class="text-xs text-gray-500">$${(p.precioVenta || 0).toFixed(2)}</span>
-        <span class="text-xs ${stockColor}">${stockInfo}</span>
-      </div>
-    `;
-
-    btn.onclick = (e) => {
-      e.preventDefault();
-      agregarRapido(p);
-    };
-
-    panel.appendChild(btn);
-  });
-}
-
-function agregarRapido(producto) {
-  const cantidad = 1;
-  const precio = producto.precioVenta || 0;
-  const subtotal = cantidad * precio;
-
-  // Descontar stock si existe
-  if (typeof producto.stock === "number") {
-    producto.stock = Math.max(0, producto.stock - 1);
-  }
-
-  sincronizarInventario();
-
-  ventaActual.push({
-    id: Date.now(),
-    usuario: usuarioActual,
-    texto: `${cantidad} ${producto.unidad || "pieza"} ${producto.nombre}`,
-    cantidad,
-    unidad: producto.unidad || "pieza",
-    precio,
-    multi: true,
-    subtotal,
-    costoUnitario: producto.costo || 0,
-    ganancia: producto.costo && producto.costo > 0 ? subtotal - producto.costo : 0
-  });
-
-  totalVenta += subtotal;
-  actualizarTotalVenta();
-  renderPreVenta();
-  renderProductosRapidos();
-
-  navigator.vibrate?.(30);
-}
-
-// ======================================
 // 📱 PWA
 // ======================================
 
@@ -977,12 +980,11 @@ if (pinInput && togglePin) {
 // ======================================
 // 🔄 SINCRONIZACIÓN EN TIEMPO REAL
 // ======================================
-// Escuchar cambios en localStorage desde inventario.html
 window.addEventListener("storage", (event) => {
   if (event.key === "inventarioPOS") {
     console.log("📡 Inventario actualizado desde otra pestaña");
     inventario = JSON.parse(event.newValue) || [];
     actualizarSugerencias();
-    renderProductosRapidos();
+    actualizarSelectProductos();
   }
 });
