@@ -342,86 +342,28 @@ function agregar() {
 
   const d = parsear(v);
 
-  let subtotal;
+  const item = {
+    texto: d.texto,
+    cantidad: d.cantidad,
+    unidad: d.unidad,
+    precio: d.precioUnitario,
+    subtotal: d.cantidad * d.precioUnitario
+  };
 
-if (d.unidad === "kg") {
-  subtotal = d.cantidad * d.precioUnitario;
-} else {
-  subtotal = d.modoLote ? d.cantidad * d.precioUnitario : d.precioUnitario;
+  // 🔥 ÚNICA REGLA DE INVENTARIO
+  registrarVentaEnInventario(item);
+
+  // 🧾 venta normal
+  ventaActual.push(item);
+  totalVenta += item.subtotal;
+
+  actualizarTotalVenta();
+  renderPreVenta();
+
+  input.value = "";
+  preview.textContent = "";
 }
 
-const nombre = extraerNombre(d.texto);
-
-let producto = buscarProducto(nombre);
-
-  if (producto && producto.precioVenta) {
-  d.precioUnitario = producto.precioVenta;
-}
-  
-// 🧠 si no existe, se crea automáticamente desde la venta
-
-  if (!producto) {
-
-producto = normalizarProducto({
-  nombre: nombre,
-  stock: 0,
-  costo: null,
-  precioVenta: d.precioUnitario,
-  unidad: d.unidad,
-  alias: [nombre]
-});
-
-inventario.push(producto);
-
-} else {
-
-  // 🧠 asegurar stock siempre válido
-  producto.stock = Number(producto.stock || 0);
-
-  // 🧠 descontar sin romper
-  producto.stock = producto.stock - d.cantidad;
-
-  // 🚫 evitar negativos
-  if (producto.stock < 0) producto.stock = 0;
-}
-
-  // 🧠 NORMALIZAR INVENTARIO (unificar stock base)
-// 🧠 asegurar stock válido (única fuente)
-if (typeof producto.stock !== "number") {
-  producto.stock = 0;
-}
-  
-
-let costoBase = Number(producto?.costo || 0);
-  
-
-else {
-
- // 🧠 asegurar stock válido
-if (typeof producto.stock !== "number") {
-  producto.stock = 0;
-}
-
-
-
-// 🚫 evitar negativos
-if (producto.stock < 0) {
-  producto.stock = 0;
-}
-
-// 💰 SOLO actualizar precio de venta, NO costo
-// 🔥 SOLO actualizar precio si el usuario lo repite conscientemente
-if (producto.precioVenta && producto.precioVenta !== d.precioUnitario) {
-
-  const confirmar = confirm(
-    `¿Actualizar precio de ${producto.nombre} de $${producto.precioVenta} a $${d.precioUnitario}?`
-  );
-
-  if (confirmar) {
-    producto.precioVenta = d.precioUnitario;
-  }
-
-}
 
   // 🧠 agregar alias inteligente
   const aliasNormal = normalizar(nombre);
@@ -1021,3 +963,32 @@ localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
   navigator.vibrate?.(30);
 }
 
+
+function registrarVentaEnInventario(item) {
+
+  const nombre = extraerNombre(item.texto);
+  let producto = buscarProducto(nombre);
+
+  // 🆕 si no existe, crear SIEMPRE
+  if (!producto) {
+    producto = normalizarProducto({
+      nombre,
+      stock: 0,
+      costo: 0,
+      precioVenta: item.precio,
+      unidad: item.unidad,
+      alias: [nombre]
+    });
+
+    inventario.push(producto);
+  }
+
+  // 🧠 seguridad total
+  producto.stock = Number(producto.stock || 0);
+
+  // ⚡ descuento seguro
+  producto.stock = Math.max(0, producto.stock - item.cantidad);
+
+  // 💾 persistencia única
+  localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
+}
