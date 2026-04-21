@@ -169,6 +169,8 @@ function extraerNombre(texto) {
 
 input.addEventListener("input", () => {
 
+ 
+
   const v = input.value.trim().toLowerCase();
   if (!v) {
     preview.textContent = "";
@@ -177,6 +179,27 @@ input.addEventListener("input", () => {
   }
 
   const d = parsear(v);
+
+// 🔎 detectar producto en inventario
+const nombreDetectado = extraerNombre(v);
+
+const productoEncontrado = inventario.find(p =>
+  nombreDetectado.includes(p.nombre) ||
+  p.alias?.some(a => nombreDetectado.includes(a))
+);
+
+if (productoEncontrado) {
+
+  preview.textContent =
+    `📦 ${productoEncontrado.nombre} | 💰 Costo: $${productoEncontrado.costo || 0}`;
+
+} else {
+
+  preview.textContent = "";
+
+}
+
+  
 
   // preview precio
   if (d.multi) {
