@@ -332,17 +332,17 @@ if (!producto.costo) producto.costo = null;
   inventario.push(producto);
 } else {
 
-  // 🧠 asegurar stock válido
-if (typeof producto.cantidad !== "number") {
-  producto.cantidad = 0;
+ // 🧠 asegurar stock válido
+if (typeof producto.stock !== "number") {
+  producto.stock = 0;
 }
 
 // 📉 descontar inventario correctamente
-producto.cantidad -= d.cantidad;
+producto.stock -= d.cantidad;
 
 // 🚫 evitar negativos
-if (producto.cantidad < 0) {
-  producto.cantidad = 0;
+if (producto.stock < 0) {
+  producto.stock = 0;
 }
 
   // 💰 solo actualizar costo si es realista
