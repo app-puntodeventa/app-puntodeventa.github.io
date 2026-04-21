@@ -323,6 +323,32 @@ const nombre = extraerNombre(d.texto);
 
 let producto = buscarProducto(nombre);
 
+// 🧠 si no existe, se crea automáticamente desde la venta
+if (!producto) {
+
+  producto = {
+    nombre: nombre.trim(),
+    stock: d.cantidad, // se asume que “existe porque se vendió”
+    unidad: unidadDetectada(nombre),
+    costo: null,
+    precioVenta: null,
+    alias: [nombre]
+  };
+
+  inventario.push(producto);
+
+} else {
+
+  // si existe, solo descuenta stock
+  if (typeof producto.stock !== "number") {
+    producto.stock = d.cantidad;
+  } else {
+    producto.stock -= d.cantidad;
+  }
+
+  if (producto.stock < 0) producto.stock = 0;
+}
+
   // 🧠 NORMALIZAR INVENTARIO (unificar stock base)
 if (producto) {
   if (typeof producto.cantidad !== "number") {
