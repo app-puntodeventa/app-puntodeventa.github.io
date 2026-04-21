@@ -238,10 +238,32 @@ if (productoEncontrado) {
   const datalist = document.getElementById("sugerencias");
   datalist.innerHTML = "";
 
-  const filtrados = inventario.filter(p =>
-    v.includes(p.nombre) ||
-    p.alias?.some(a => v.includes(a))
-  );
+const n = normalizar(v);
+
+const filtrados = inventario
+  .map(p => {
+
+    let score = 0;
+
+    const nombre = normalizar(p.nombre);
+
+    // coincidencia directa
+    if (nombre.includes(n)) score += 3;
+    if (n.includes(nombre)) score += 2;
+
+    // coincidencia por alias
+    p.alias?.forEach(a => {
+      const al = normalizar(a);
+      if (al.includes(n) || n.includes(al)) {
+        score += 1;
+      }
+    });
+
+    return { ...p, score };
+  })
+  .filter(p => p.score > 0)
+  .sort((a, b) => b.score - a.score)
+  .slice(0, 5);
 
   filtrados.forEach(p => {
     const option = document.createElement("option");
