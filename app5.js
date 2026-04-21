@@ -310,7 +310,7 @@ if (!producto) {
   const nombreNormalizado = normalizar(nombre);
 
   producto = {
-    nombre: nombreNormalizado,
+    nombre: nombre.trim(),
     cantidad: d.cantidad,
     costo: d.precio || 0,
     alias: [nombre]
@@ -340,7 +340,7 @@ if (!producto) {
   // 🧠 agregar alias inteligente
   const aliasNormal = normalizar(nombre);
 
-  const existeAlias = producto.alias.some(a =>
+  const existeAlias = (producto.alias || []).some(a =>
     normalizar(a) === aliasNormal
   );
 
