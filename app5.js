@@ -392,11 +392,7 @@ if (typeof producto.stock !== "number") {
 }
   
 
-let costoBase = 0;
-
-if (producto && producto.costo != null) {
-  costoBase = Number(producto.costo) || 0;
-}
+let costoBase = Number(producto?.costo || 0);
   
 
 else {
