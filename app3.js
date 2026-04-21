@@ -286,3 +286,36 @@ input.addEventListener("keydown", e => {
 });
 
 $("btnAdd").onclick = agregar;
+
+
+
+
+document.getElementById("fileExcel").addEventListener("change", (e) => {
+
+  const file = e.target.files[0];
+  if (!file) return;
+
+  importarExcel(file, (inventarioNuevo) => {
+
+    inventario = inventarioNuevo;
+
+    guardarInventario();
+    renderInventario();
+
+    alert("Inventario importado correctamente");
+  });
+});
+
+
+
+document.getElementById("btnExportExcel").onclick = () => {
+  exportarExcel(inventario);
+};
+
+
+
+
+
+
+
+
