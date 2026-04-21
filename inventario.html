@@ -145,71 +145,72 @@ function colorStock(cantidad) {
 // =======================
 // 🧾 RENDER
 // =======================
-function render() {
+
+  function render() {
 
   lista.innerHTML = "";
 
   inventario.forEach((p, i) => {
 
-    const div = document.createElement("div");
+    const tr = document.createElement("tr");
 
-    div.className = `p-3 rounded shadow flex flex-col gap-2 ${colorStock(p.cantidad)}`;
+    // color por stock
+    let color = "";
+    if (p.cantidad <= 0) color = "bg-red-100";
+    else if (p.cantidad < 5) color = "bg-yellow-100";
 
-    div.innerHTML = `
-      <div class="flex justify-between items-center">
+    tr.className = color;
 
+    tr.innerHTML = `
+      <td class="p-2">
         <input value="${p.nombre}"
-          class="font-bold bg-transparent border-b w-full mr-2">
+          class="w-full border p-1 rounded bg-transparent">
+      </td>
 
+      <td class="p-2">
+        <input type="number" value="${p.cantidad}"
+          class="w-20 border p-1 rounded">
+      </td>
+
+      <td class="p-2">
+        <input type="number" value="${p.costo}"
+          class="w-20 border p-1 rounded">
+      </td>
+
+      <td class="p-2 text-center">
         <button class="text-red-500">
           <i class="bi bi-trash"></i>
         </button>
-
-      </div>
-
-      <div class="flex gap-2">
-
-        <input type="number" value="${p.cantidad}"
-          class="border p-1 rounded w-1/2">
-
-        <input type="number" value="${p.costo}"
-          class="border p-1 rounded w-1/2">
-
-      </div>
+      </td>
     `;
 
-    const inputs = div.querySelectorAll("input");
-
     // ✏️ editar nombre
-    inputs[0].onchange = (e) => {
+    tr.querySelectorAll("input")[0].onchange = (e) => {
       p.nombre = e.target.value.toLowerCase();
       guardar();
     };
 
     // ✏️ editar cantidad
-    inputs[1].onchange = (e) => {
+    tr.querySelectorAll("input")[1].onchange = (e) => {
       p.cantidad = Number(e.target.value);
       guardar();
-      render();
     };
 
     // ✏️ editar costo
-    inputs[2].onchange = (e) => {
+    tr.querySelectorAll("input")[2].onchange = (e) => {
       p.costo = Number(e.target.value);
       guardar();
     };
 
     // 🗑 eliminar
-    div.querySelector("button").onclick = () => {
-
+    tr.querySelector("button").onclick = () => {
       if (!confirm("¿Eliminar producto?")) return;
-
       inventario.splice(i, 1);
       guardar();
       render();
     };
 
-    lista.appendChild(div);
+    lista.appendChild(tr);
   });
 }
 
