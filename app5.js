@@ -21,7 +21,7 @@ function normalizarProducto(p) {
     id: p.id || Date.now(),
     nombre: (p.nombre || "").toLowerCase().trim(),
     stock: Number(p.stock ?? p.cantidad ?? 0),
-    costo: p.costo !== null ? Number(p.costo) : null,
+    costo: p.costo !== null && p.costo !== undefined ? Number(p.costo) : null,
     precioVenta: p.precioVenta ?? p.precio ? Number(p.precioVenta ?? p.precio) : 0,
     unidad: p.unidad || "pieza",
     alias: Array.isArray(p.alias) ? p.alias : []
@@ -75,6 +75,63 @@ function escaparHTML(texto) {
     "'": "&#039;"
   };
   return (texto || "").replace(/[&<>"']/g, char => map[char]);
+}
+
+/**
+ * 🔑 SINCRONIZA INVENTARIO CON LOCALSTORAGE
+ * Se ejecuta cada vez que hay cambios
+ */
+function sincronizarInventario() {
+  inventario = inventario.map(p => normalizarProducto(p));
+  localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
+  console.log("✓ Inventario sincronizado:", inventario.length, "productos");
+}
+
+/**
+ * 🆕 AGREGAR O ACTUALIZAR PRODUCTO EN INVENTARIO
+ * Este es el corazón del sistema: la venta rápida alimenta el inventario
+ */
+function actualizarProductoInventario(nombre, precioVenta, unidad = "pieza", cantidad = 0) {
+  const nombreNormalizado = nombre.toLowerCase().trim();
+  
+  let producto = buscarProducto(nombreNormalizado);
+
+  if (producto) {
+    // Producto existe: actualizar precio si es diferente
+    if (precioVenta > 0 && producto.precioVenta !== precioVenta) {
+      console.log(`📝 Actualizando precio de "${producto.nombre}": $${producto.precioVenta} → $${precioVenta}`);
+      producto.precioVenta = precioVenta;
+    }
+
+    // Agregar alias si no existe
+    const aliasNormal = normalizar(nombreNormalizado);
+    if (!(producto.alias || []).some(a => normalizar(a) === aliasNormal)) {
+      producto.alias.push(nombreNormalizado);
+    }
+
+    // Actualizar stock si se especifica
+    if (cantidad > 0) {
+      producto.stock = (producto.stock || 0) + cantidad;
+    }
+  } else {
+    // Crear nuevo producto en inventario
+    console.log(`✨ Nuevo producto agregado: "${nombreNormalizado}" - $${precioVenta}`);
+    producto = {
+      id: Date.now(),
+      nombre: nombreNormalizado,
+      stock: cantidad || 0,
+      costo: null, // El usuario lo agregará manualmente en inventario.html
+      precioVenta: precioVenta || 0,
+      unidad: unidad || "pieza",
+      alias: [nombreNormalizado],
+      creadoDesdeVenta: true,
+      fechaCreacion: new Date().toLocaleString()
+    };
+    inventario.push(producto);
+  }
+
+  sincronizarInventario();
+  return producto;
 }
 
 // ======================================
@@ -167,10 +224,23 @@ function actualizarSugerencias() {
   if (!datalist) return;
 
   datalist.innerHTML = "";
+  
+  // Agregar todos los nombres de productos
   inventario.forEach(p => {
     const option = document.createElement("option");
     option.value = p.nombre;
     datalist.appendChild(option);
+  });
+
+  // Agregar todos los alias
+  inventario.forEach(p => {
+    (p.alias || []).forEach(alias => {
+      if (alias !== p.nombre) {
+        const option = document.createElement("option");
+        option.value = alias;
+        datalist.appendChild(option);
+      }
+    });
   });
 }
 
@@ -195,6 +265,10 @@ function parsear(texto) {
   // Detectar unidad
   if (t.includes("kg") || t.includes("kilo")) {
     unidad = "kg";
+  } else if (t.includes("g") && !t.includes("kg")) {
+    unidad = "g";
+  } else if (t.includes("litro") || t.includes("l")) {
+    unidad = "l";
   } else if (t.includes("pieza") || t.includes("pza")) {
     unidad = "pieza";
   }
@@ -230,7 +304,7 @@ function extraerNombre(texto) {
   return (texto || "")
     .toLowerCase()
     .replace(/\d+/g, "")
-    .replace(/\b(kilos?|kg|pieza?s?|pzas?|de|a|x|cada|uno|por|pesos?)\b/g, "")
+    .replace(/\b(kilos?|kg|gramos?|g|litros?|l|pieza?s?|pzas?|de|a|x|cada|uno|por|pesos?)\b/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -254,9 +328,12 @@ input.addEventListener("input", () => {
 
   // Preview inteligente
   if (productoEncontrado) {
-    preview.textContent = `📦 ${productoEncontrado.nombre} | 💰 Venta: $${productoEncontrado.precioVenta || 0}`;
+    const stock = productoEncontrado.stock > 0 ? `(${productoEncontrado.stock} en stock)` : "(sin stock)";
+    preview.textContent = `📦 ${productoEncontrado.nombre} | 💰 $${productoEncontrado.precioVenta || 0} ${stock}`;
   } else if (d.modoLote) {
-    preview.textContent = `${d.cantidad} x ${d.precioUnitario} = $${d.cantidad * d.precioUnitario}`;
+    preview.textContent = `${d.cantidad} x ${d.precioUnitario} = $${(d.cantidad * d.precioUnitario).toFixed(2)}`;
+  } else if (d.precioUnitario > 0) {
+    preview.textContent = `🆕 Nuevo: ${nombreDetectado || "producto"} por $${d.precioUnitario}`;
   } else {
     preview.textContent = "";
   }
@@ -283,7 +360,7 @@ input.addEventListener("input", () => {
     })
     .filter(p => p.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 5);
+    .slice(0, 8);
 
   filtrados.forEach(p => {
     const option = document.createElement("option");
@@ -302,49 +379,21 @@ function agregar() {
 
   const d = parsear(v);
   const nombre = extraerNombre(d.texto);
-  let producto = buscarProducto(nombre);
+  
+  if (!nombre) {
+    alert("No se pudo extraer el nombre del producto");
+    return;
+  }
 
   const subtotal = d.modoLote ? d.cantidad * d.precioUnitario : d.precioUnitario;
 
-  // Si no existe, crear automáticamente (✅ ALIMENTA INVENTARIO)
-  if (!producto) {
-    producto = {
-      id: Date.now(),
-      nombre: nombre.trim(),
-      stock: 0,
-      unidad: d.unidad,
-      costo: null,
-      precioVenta: d.precioUnitario,
-      alias: [nombre],
-      creadoDesdeVenta: true
-    };
-    inventario.push(producto);
-  } else {
-    // Descontar stock solo si existe
-    if (typeof producto.stock === "number") {
-      producto.stock = Math.max(0, producto.stock - d.cantidad);
-    }
-
-    // Confirmar actualización de precio si es diferente
-    if (producto.precioVenta && producto.precioVenta !== d.precioUnitario) {
-      const confirmar = confirm(
-        `¿Actualizar precio de ${producto.nombre} de $${producto.precioVenta} a $${d.precioUnitario}?`
-      );
-      if (confirmar) {
-        producto.precioVenta = d.precioUnitario;
-      }
-    }
-
-    // Agregar alias si no existe
-    const aliasNormal = normalizar(nombre);
-    if (!(producto.alias || []).some(a => normalizar(a) === aliasNormal)) {
-      (producto.alias || []).push(nombre);
-    }
-  }
-
-  // Limpiar datos antes de guardar
-  inventario = inventario.map(p => normalizarProducto(p));
-  localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
+  // 🔑 ACTUALIZAR INVENTARIO (AQUÍ ES LA MAGIA)
+  const producto = actualizarProductoInventario(
+    nombre,
+    d.precioUnitario,
+    d.unidad,
+    0 // No incrementamos stock desde venta rápida
+  );
 
   // Calcular ganancia solo si hay costo válido
   let gananciaEstimada = 0;
@@ -373,6 +422,7 @@ function agregar() {
   preview.textContent = "";
   renderPreVenta();
   renderProductosRapidos();
+  actualizarSugerencias(); // Actualizar sugerencias con nuevo producto
 
   navigator.vibrate?.(30);
 }
@@ -416,12 +466,12 @@ function renderPreVenta() {
 }
 
 // ======================================
-// 💰 FINALIZAR VENTA - ✅ CORREGIDO
+// 💰 FINALIZAR VENTA
 // ======================================
 
 document.getElementById("btnFinalizar").onclick = () => {
-  console.log("btnFinalizar clicked"); // Debug
-  console.log("ventaActual:", ventaActual); // Debug
+  console.log("btnFinalizar clicked");
+  console.log("ventaActual:", ventaActual);
 
   if (!ventaActual || ventaActual.length === 0) {
     alert("No hay productos en la venta");
@@ -435,13 +485,13 @@ document.getElementById("btnFinalizar").onclick = () => {
 
   // Crear objeto de venta
   const venta = {
-    items: JSON.parse(JSON.stringify(ventaActual)), // Copia profunda
+    items: JSON.parse(JSON.stringify(ventaActual)),
     total: totalVenta,
     usuario: usuarioActual,
     fecha: new Date().toLocaleString()
   };
 
-  console.log("Venta a guardar:", venta); // Debug
+  console.log("Venta a guardar:", venta);
 
   // Asegurar que el usuario existe en data
   if (!data[usuarioActual]) {
@@ -452,7 +502,7 @@ document.getElementById("btnFinalizar").onclick = () => {
   data[usuarioActual].ventas.push(venta);
   localStorage.setItem("dataPOS", JSON.stringify(data));
 
-  console.log("Venta guardada en localStorage"); // Debug
+  console.log("Venta guardada en localStorage");
 
   // Renderizar la tarjeta
   renderVenta(venta);
@@ -466,7 +516,7 @@ document.getElementById("btnFinalizar").onclick = () => {
   actualizarGanancias();
   renderHistorial();
 
-  alert("✅ Venta guardada correctamente");
+  alert("✅ Venta guardada correctamente\n📦 Inventario actualizado");
 };
 
 // ======================================
@@ -793,14 +843,21 @@ function renderProductosRapidos() {
     return;
   }
 
+  // Mostrar productos ordenados por uso reciente (últimos vendidos)
   inventario.slice(0, 20).forEach(p => {
     const btn = document.createElement("button");
     btn.className = "bg-white border rounded p-2 text-left shadow hover:bg-gray-50 transition";
     btn.type = "button";
 
+    const stockInfo = p.stock > 0 ? `(${p.stock})` : "(sin stock)";
+    const stockColor = p.stock > 0 ? "text-gray-500" : "text-red-500";
+
     btn.innerHTML = `
       <div class="font-bold text-sm">${escaparHTML(p.nombre)}</div>
-      <div class="text-xs text-gray-500">$${(p.precioVenta || 0).toFixed(2)}</div>
+      <div class="flex justify-between">
+        <span class="text-xs text-gray-500">$${(p.precioVenta || 0).toFixed(2)}</span>
+        <span class="text-xs ${stockColor}">${stockInfo}</span>
+      </div>
     `;
 
     btn.onclick = (e) => {
@@ -817,12 +874,12 @@ function agregarRapido(producto) {
   const precio = producto.precioVenta || 0;
   const subtotal = cantidad * precio;
 
-  // Descontar stock
+  // Descontar stock si existe
   if (typeof producto.stock === "number") {
     producto.stock = Math.max(0, producto.stock - 1);
   }
 
-  localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
+  sincronizarInventario();
 
   ventaActual.push({
     id: Date.now(),
@@ -916,3 +973,16 @@ if (pinInput && togglePin) {
       : '<i class="bi bi-eye"></i>';
   };
 }
+
+// ======================================
+// 🔄 SINCRONIZACIÓN EN TIEMPO REAL
+// ======================================
+// Escuchar cambios en localStorage desde inventario.html
+window.addEventListener("storage", (event) => {
+  if (event.key === "inventarioPOS") {
+    console.log("📡 Inventario actualizado desde otra pestaña");
+    inventario = JSON.parse(event.newValue) || [];
+    actualizarSugerencias();
+    renderProductosRapidos();
+  }
+});
