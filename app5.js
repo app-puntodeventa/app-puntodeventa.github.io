@@ -326,14 +326,15 @@ let producto = buscarProducto(nombre);
 // 🧠 si no existe, se crea automáticamente desde la venta
 if (!producto) {
 
-  producto = {
-    nombre: nombre.trim(),
-    stock: d.cantidad, // se asume que “existe porque se vendió”
-    unidad: unidadDetectada(nombre),
-    costo: null,
-    precioVenta: null,
-    alias: [nombre]
-  };
+producto = {
+  nombre: nombre.trim(),
+  stock: 0,
+  unidad: unidadDetectada(nombre),
+  costo: null,
+  precioVenta: null,
+  alias: [nombre],
+  creadoDesdeVenta: true
+};
 
   inventario.push(producto);
 
