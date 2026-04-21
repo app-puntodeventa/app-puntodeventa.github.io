@@ -5,6 +5,7 @@
 let usuarioActual = null;
 let ventaActual = [];
 let totalVenta = 0;
+let modoVenta = "catalogo"; // "catalogo" o "libre"
 
 let data = JSON.parse(localStorage.getItem("dataPOS")) || {};
 let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
@@ -13,9 +14,6 @@ let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
 // 🔧 FUNCIONES UTILIDAD
 // ======================================
 
-/**
- * Normaliza un producto asegurando tipos de datos correctos
- */
 function normalizarProducto(p) {
   return {
     id: p.id || Date.now(),
@@ -28,9 +26,6 @@ function normalizarProducto(p) {
   };
 }
 
-/**
- * Normaliza texto para búsquedas
- */
 function normalizar(texto) {
   return (texto || "")
     .toLowerCase()
@@ -39,9 +34,6 @@ function normalizar(texto) {
     .replace(/[^\w\s]/g, "");
 }
 
-/**
- * Busca un producto en inventario por nombre o alias
- */
 function buscarProducto(nombre) {
   if (!nombre || !nombre.trim()) return null;
 
@@ -50,10 +42,8 @@ function buscarProducto(nombre) {
   return inventario.find(p => {
     const nombreBase = normalizar(p.nombre);
 
-    // Coincidencia fuerte por nombre
     const coincideNombre = n.includes(nombreBase) || nombreBase.includes(n);
 
-    // Coincidencia por alias
     const coincideAlias = (p.alias || []).some(a => {
       const al = normalizar(a);
       return n.includes(al) || al.includes(n);
@@ -63,9 +53,6 @@ function buscarProducto(nombre) {
   });
 }
 
-/**
- * Escapa caracteres HTML para prevenir XSS
- */
 function escaparHTML(texto) {
   const map = {
     "&": "&amp;",
@@ -77,18 +64,12 @@ function escaparHTML(texto) {
   return (texto || "").replace(/[&<>"']/g, char => map[char]);
 }
 
-/**
- * 🔑 SINCRONIZA INVENTARIO CON LOCALSTORAGE
- */
 function sincronizarInventario() {
   inventario = inventario.map(p => normalizarProducto(p));
   localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
   console.log("✓ Inventario sincronizado:", inventario.length, "productos");
 }
 
-/**
- * 🆕 AGREGAR O ACTUALIZAR PRODUCTO EN INVENTARIO
- */
 function actualizarProductoInventario(nombre, precioVenta, unidad = "pieza", cantidad = 0) {
   const nombreNormalizado = nombre.toLowerCase().trim();
   
@@ -97,18 +78,15 @@ function actualizarProductoInventario(nombre, precioVenta, unidad = "pieza", can
   if (producto) {
     console.log(`📦 Producto encontrado: "${producto.nombre}"`);
 
-    // Agregar alias si no existe
     const aliasNormal = normalizar(nombreNormalizado);
     if (!(producto.alias || []).some(a => normalizar(a) === aliasNormal)) {
       producto.alias.push(nombreNormalizado);
     }
 
-    // Actualizar stock si se especifica
     if (cantidad > 0) {
       producto.stock = (producto.stock || 0) + cantidad;
     }
   } else {
-    // Crear nuevo producto en inventario
     console.log(`✨ Nuevo producto agregado: "${nombreNormalizado}" - $${precioVenta}`);
     producto = {
       id: Date.now(),
@@ -144,12 +122,23 @@ const VALID_PINS = {
 
 const modal = document.getElementById("modal");
 const selectProducto = document.getElementById("selectProducto");
-const input = document.getElementById("inputProducto");
-const preview = document.getElementById("preview");
+const inputCantidad = document.getElementById("inputCantidad");
+const previewCatalogo = document.getElementById("previewCatalogo");
+
+const inputNombreLibre = document.getElementById("inputNombreLibre");
+const inputCantidadLibre = document.getElementById("inputCantidadLibre");
+const inputPrecioLibre = document.getElementById("inputPrecioLibre");
+const previewLibre = document.getElementById("previewLibre");
+
 const totalVentaSpan = document.getElementById("totalVenta");
 const totalDiaSpan = document.getElementById("totalDia");
 const listaVentas = document.getElementById("listaVentas");
 const preVenta = document.getElementById("preVenta");
+
+const tabCatalogo = document.getElementById("tabCatalogo");
+const tabLibre = document.getElementById("tabLibre");
+const modooCatalogo = document.getElementById("modooCatalogo");
+const modoLibre = document.getElementById("modoLibre");
 
 // ======================================
 // 🔐 LOGIN
@@ -192,7 +181,6 @@ function init() {
   document.getElementById("loginScreen").style.display = "none";
   document.getElementById("userLabel").textContent = usuarioActual;
 
-  // Mostrar botones solo si es ADMIN
   const btnGlobal = document.getElementById("btnPDFGlobal");
   const panel = document.getElementById("panelGanancias");
 
@@ -206,25 +194,19 @@ function init() {
   checkInstallStatus();
   renderHistorial();
   actualizarTotalDia();
-  actualizarSugerencias();
   actualizarSelectProductos();
   actualizarGanancias();
 }
 
-/**
- * 🆕 ACTUALIZAR SELECT DE PRODUCTOS
- */
 function actualizarSelectProductos() {
   if (!selectProducto) {
     console.warn("selectProducto no encontrado");
     return;
   }
 
-  // Remover opciones excepto la primera
   const opcionesExistentes = selectProducto.querySelectorAll("option:not(:first-child)");
   opcionesExistentes.forEach(opt => opt.remove());
 
-  // Agrupar por primera letra para mejor organización
   const productosOrdenados = [...inventario].sort((a, b) => a.nombre.localeCompare(b.nombre));
 
   productosOrdenados.forEach(p => {
@@ -235,113 +217,52 @@ function actualizarSelectProductos() {
   });
 }
 
-/**
- * Actualiza la lista de sugerencias del datalist
- */
-function actualizarSugerencias() {
-  const datalist = document.getElementById("sugerencias");
-  if (!datalist) return;
-
-  datalist.innerHTML = "";
-  
-  // Agregar todos los nombres de productos
-  inventario.forEach(p => {
-    const option = document.createElement("option");
-    option.value = p.nombre;
-    datalist.appendChild(option);
-  });
-
-  // Agregar todos los alias
-  inventario.forEach(p => {
-    (p.alias || []).forEach(alias => {
-      if (alias !== p.nombre) {
-        const option = document.createElement("option");
-        option.value = alias;
-        datalist.appendChild(option);
-      }
-    });
-  });
-}
-
 init();
 
 // ======================================
-// 🧠 PARSER INTELIGENTE
+// 🔀 CAMBIAR MODO DE VENTA
 // ======================================
 
-/**
- * Parsea texto de entrada para extraer cantidad, precio y unidad
- */
-function parsear(texto) {
-  const t = (texto || "").toLowerCase();
-  const nums = t.match(/\d+(\.\d+)?/g)?.map(Number) || [];
-
-  let cantidad = 1;
-  let precioUnitario = 0;
-  let unidad = "pieza";
-  let modoLote = false;
-
-  // Detectar unidad
-  if (t.includes("kg") || t.includes("kilo")) {
-    unidad = "kg";
-  } else if (t.includes("g") && !t.includes("kg")) {
-    unidad = "g";
-  } else if (t.includes("litro") || t.includes("l")) {
-    unidad = "l";
-  } else if (t.includes("pieza") || t.includes("pza")) {
-    unidad = "pieza";
-  }
-
-  // Detectar patrones de venta
-  const esMultiplicacion = t.includes(" x ") || t.includes("cada") || t.includes("c/u");
-  const esPrecioTotal = t.includes("por") || t.includes("total") || t.includes("son");
-
-  if (nums.length === 1) {
-    precioUnitario = nums[0];
-  } else if (nums.length >= 2) {
-    cantidad = nums[0];
-    precioUnitario = nums[1];
-    modoLote = esMultiplicacion ? true : !esPrecioTotal;
-  }
-
-  const subtotal = modoLote ? cantidad * precioUnitario : precioUnitario;
-
-  return {
-    texto,
-    cantidad,
-    precioUnitario,
-    unidad,
-    subtotal,
-    modoLote
+if (tabCatalogo) {
+  tabCatalogo.onclick = () => {
+    modoVenta = "catalogo";
+    modooCatalogo.classList.remove("hidden");
+    modoLibre.classList.add("hidden");
+    
+    tabCatalogo.classList.add("border-b-2", "border-blue-600", "text-blue-600", "font-bold");
+    tabCatalogo.classList.remove("text-gray-600", "border-transparent");
+    
+    tabLibre.classList.remove("border-b-2", "border-blue-600", "text-blue-600", "font-bold");
+    tabLibre.classList.add("text-gray-600", "border-transparent");
   };
 }
 
-/**
- * Extrae el nombre del producto del texto ingresado
- */
-function extraerNombre(texto) {
-  return (texto || "")
-    .toLowerCase()
-    .replace(/\d+/g, "")
-    .replace(/\b(kilos?|kg|gramos?|g|litros?|l|pieza?s?|pzas?|de|a|x|cada|uno|por|pesos?)\b/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+if (tabLibre) {
+  tabLibre.onclick = () => {
+    modoVenta = "libre";
+    modoLibre.classList.remove("hidden");
+    modooCatalogo.classList.add("hidden");
+    
+    tabLibre.classList.add("border-b-2", "border-blue-600", "text-blue-600", "font-bold");
+    tabLibre.classList.remove("text-gray-600", "border-transparent");
+    
+    tabCatalogo.classList.remove("border-b-2", "border-blue-600", "text-blue-600", "font-bold");
+    tabCatalogo.classList.add("text-gray-600", "border-transparent");
+    
+    inputNombreLibre.focus();
+  };
 }
 
 // ======================================
-// 👀 PREVIEW Y EVENTOS
+// 👀 PREVIEW CATÁLOGO
 // ======================================
 
-/**
- * Cuando selecciona producto del SELECT
- */
 if (selectProducto) {
   selectProducto.addEventListener("change", () => {
     const nombreSeleccionado = selectProducto.value;
     
     if (!nombreSeleccionado) {
-      input.value = "";
-      preview.textContent = "";
+      previewCatalogo.textContent = "";
       return;
     }
 
@@ -349,164 +270,188 @@ if (selectProducto) {
     
     if (producto) {
       const stock = producto.stock > 0 ? `(${producto.stock} en stock)` : "(sin stock)";
-      preview.innerHTML = `
+      previewCatalogo.innerHTML = `
         <div class="flex justify-between items-center">
           <span>📦 ${producto.nombre} - $${(producto.precioVenta || 0).toFixed(2)}</span>
           <span class="text-xs">${stock}</span>
         </div>
       `;
-      
-      // Auto-llenar cantidad en el input
-      input.value = "1";
-      input.focus();
+    }
+  });
+
+  inputCantidad.addEventListener("input", () => {
+    const nombreSeleccionado = selectProducto.value;
+    
+    if (!nombreSeleccionado || !inputCantidad.value) {
+      previewCatalogo.textContent = "";
+      return;
+    }
+
+    const producto = buscarProducto(nombreSeleccionado);
+    const cantidad = Number(inputCantidad.value) || 1;
+
+    if (producto) {
+      const subtotal = cantidad * (producto.precioVenta || 0);
+      previewCatalogo.innerHTML = `
+        <div class="flex justify-between">
+          <span>${cantidad} × ${producto.nombre}</span>
+          <span class="font-bold">$${subtotal.toFixed(2)}</span>
+        </div>
+      `;
     }
   });
 }
 
-/**
- * Cuando escribe en el input de cantidad/precio
- */
-if (input) {
-  input.addEventListener("input", () => {
-    const v = input.value.trim().toLowerCase();
-    
-    if (!v || !selectProducto || selectProducto.value === "") {
-      preview.textContent = "";
-      return;
-    }
+// ======================================
+// 👀 PREVIEW MODO LIBRE
+// ======================================
 
-    const d = parsear(v);
+if (inputNombreLibre) {
+  inputNombreLibre.addEventListener("input", actualizarPreviewLibre);
+}
 
-    if (d.precioUnitario > 0) {
-      const nombreSeleccionado = selectProducto.value;
-      const producto = buscarProducto(nombreSeleccionado);
+if (inputCantidadLibre) {
+  inputCantidadLibre.addEventListener("input", actualizarPreviewLibre);
+}
 
-      if (producto) {
-        const totalCalc = d.cantidad * d.precioUnitario;
-        preview.innerHTML = `
-          <div class="flex justify-between">
-            <span>${d.cantidad} × ${producto.nombre}</span>
-            <span class="font-bold">$${totalCalc.toFixed(2)}</span>
-          </div>
-        `;
-      }
-    }
-  });
+if (inputPrecioLibre) {
+  inputPrecioLibre.addEventListener("input", actualizarPreviewLibre);
+}
+
+function actualizarPreviewLibre() {
+  const nombre = inputNombreLibre.value.trim();
+  const cantidad = Number(inputCantidadLibre.value) || 1;
+  const precio = Number(inputPrecioLibre.value) || 0;
+
+  if (!nombre) {
+    previewLibre.textContent = "";
+    return;
+  }
+
+  if (precio > 0) {
+    const subtotal = cantidad * precio;
+    previewLibre.innerHTML = `
+      <div class="flex justify-between">
+        <span>✨ ${cantidad} × ${nombre} @ $${precio}</span>
+        <span class="font-bold">$${subtotal.toFixed(2)}</span>
+      </div>
+    `;
+  } else {
+    previewLibre.innerHTML = `<div>📝 ${nombre} (cantidad: ${cantidad})</div>`;
+  }
 }
 
 // ======================================
 // ➕ AGREGAR PRODUCTO
 // ======================================
 
-function agregar() {
-  if (!selectProducto) {
-    alert("❌ Error: SELECT no encontrado");
-    return;
-  }
-
-  const nombreSeleccionado = selectProducto.value;
-  
-  if (!nombreSeleccionado) {
-    alert("❌ Selecciona un producto primero");
-    return;
-  }
-
-  const cantidadInput = input.value.trim();
-  
-  if (!cantidadInput) {
-    alert("❌ Ingresa cantidad o precio");
-    return;
-  }
-
-  const d = parsear(cantidadInput);
-  
-  if (d.precioUnitario <= 0 && d.cantidad <= 0) {
-    alert("❌ Valores inválidos");
-    return;
-  }
-
-  const producto = buscarProducto(nombreSeleccionado);
-  
-  if (!producto) {
-    alert("❌ Producto no encontrado");
-    return;
-  }
-
-  // Usar el precio del producto del inventario si no especificó precio
-  let precioFinal = d.precioUnitario > 0 ? d.precioUnitario : (producto.precioVenta || 0);
-  let cantidadFinal = d.cantidad > 0 ? d.cantidad : 1;
-  const subtotal = cantidadFinal * precioFinal;
-
-  // 🆕 PREGUNTAR SI DESEA ACTUALIZAR PRECIO
-  if (d.precioUnitario > 0 && producto.precioVenta > 0 && producto.precioVenta !== d.precioUnitario) {
-    const confirmar = confirm(
-      `⚠️ El precio de "${producto.nombre}" en inventario es $${producto.precioVenta.toFixed(2)}\n\n¿Deseas actualizarlo a $${d.precioUnitario.toFixed(2)}?\n\nSí = Actualizar\nNo = Usar precio anterior`
-    );
-
-    if (confirmar) {
-      producto.precioVenta = d.precioUnitario;
-      sincronizarInventario();
-      actualizarSelectProductos();
-      console.log(`✅ Precio actualizado: $${producto.precioVenta}`);
-    } else {
-      precioFinal = producto.precioVenta;
+// Agregar desde catálogo
+const btnAgregarCatalogo = document.getElementById("btnAgregarCatalogo");
+if (btnAgregarCatalogo) {
+  btnAgregarCatalogo.onclick = () => {
+    const nombreSeleccionado = selectProducto.value;
+    
+    if (!nombreSeleccionado) {
+      alert("❌ Selecciona un producto");
+      return;
     }
-  }
 
-  // Si es nuevo producto pero ingresó precio, agregarlo
-  if (producto.precioVenta === 0 && d.precioUnitario > 0) {
-    actualizarProductoInventario(
-      nombreSeleccionado,
-      d.precioUnitario,
-      producto.unidad,
-      0
-    );
-  }
+    const cantidad = Number(inputCantidad.value) || 1;
+    const producto = buscarProducto(nombreSeleccionado);
 
-  // Calcular ganancia solo si hay costo válido
-  let gananciaEstimada = 0;
-  if (producto.costo && producto.costo > 0) {
-    gananciaEstimada = subtotal - (producto.costo * cantidadFinal);
-  }
+    if (!producto) {
+      alert("❌ Producto no encontrado");
+      return;
+    }
 
-  // Agregar a venta actual
-  ventaActual.push({
-    id: Date.now(),
-    usuario: usuarioActual,
-    texto: `${cantidadFinal} ${producto.unidad || "pieza"} ${producto.nombre}`,
-    cantidad: cantidadFinal,
-    unidad: producto.unidad || "pieza",
-    precio: precioFinal,
-    multi: true,
-    subtotal,
-    costoUnitario: producto.costo || 0,
-    ganancia: gananciaEstimada
-  });
+    const precioFinal = producto.precioVenta || 0;
+    const subtotal = cantidad * precioFinal;
 
-  totalVenta += subtotal;
-  actualizarTotalVenta();
+    let gananciaEstimada = 0;
+    if (producto.costo && producto.costo > 0) {
+      gananciaEstimada = subtotal - (producto.costo * cantidad);
+    }
 
-  // Limpiar
-  selectProducto.value = "";
-  input.value = "";
-  preview.textContent = "";
-  
-  renderPreVenta();
-  actualizarSelectProductos();
+    ventaActual.push({
+      id: Date.now(),
+      usuario: usuarioActual,
+      texto: `${cantidad} ${producto.unidad || "pieza"} ${producto.nombre}`,
+      cantidad,
+      unidad: producto.unidad || "pieza",
+      precio: precioFinal,
+      multi: true,
+      subtotal,
+      costoUnitario: producto.costo || 0,
+      ganancia: gananciaEstimada
+    });
 
-  navigator.vibrate?.(30);
+    totalVenta += subtotal;
+    actualizarTotalVenta();
+
+    selectProducto.value = "";
+    inputCantidad.value = "1";
+    previewCatalogo.textContent = "";
+    
+    renderPreVenta();
+    navigator.vibrate?.(30);
+  };
 }
 
-if (input) {
-  input.addEventListener("keydown", e => {
-    if (e.key === "Enter") agregar();
-  });
-}
+// Agregar desde modo libre
+const btnAgregarLibre = document.getElementById("btnAgregarLibre");
+if (btnAgregarLibre) {
+  btnAgregarLibre.onclick = () => {
+    const nombre = inputNombreLibre.value.trim();
+    const cantidad = Number(inputCantidadLibre.value) || 1;
+    const precio = Number(inputPrecioLibre.value) || 0;
 
-// Buscar y configurar botón de agregar
-let btnAdd = document.getElementById("btnAdd");
-if (btnAdd) {
-  btnAdd.onclick = agregar;
+    if (!nombre) {
+      alert("❌ Ingresa el nombre del producto");
+      return;
+    }
+
+    if (precio <= 0) {
+      alert("❌ Ingresa un precio válido");
+      return;
+    }
+
+    // 🔑 AGREGAR AL INVENTARIO
+    const producto = actualizarProductoInventario(nombre, precio, "pieza", 0);
+    
+    const subtotal = cantidad * precio;
+
+    let gananciaEstimada = 0;
+    if (producto.costo && producto.costo > 0) {
+      gananciaEstimada = subtotal - (producto.costo * cantidad);
+    }
+
+    ventaActual.push({
+      id: Date.now(),
+      usuario: usuarioActual,
+      texto: `${cantidad} pieza ${producto.nombre}`,
+      cantidad,
+      unidad: "pieza",
+      precio,
+      multi: true,
+      subtotal,
+      costoUnitario: producto.costo || 0,
+      ganancia: gananciaEstimada
+    });
+
+    totalVenta += subtotal;
+    actualizarTotalVenta();
+
+    inputNombreLibre.value = "";
+    inputCantidadLibre.value = "1";
+    inputPrecioLibre.value = "";
+    previewLibre.textContent = "";
+    
+    // Actualizar select para que aparezca el nuevo producto
+    actualizarSelectProductos();
+    
+    renderPreVenta();
+    navigator.vibrate?.(30);
+  };
 }
 
 // ======================================
@@ -555,9 +500,6 @@ function renderPreVenta() {
 const btnFinalizar = document.getElementById("btnFinalizar");
 if (btnFinalizar) {
   btnFinalizar.onclick = () => {
-    console.log("btnFinalizar clicked");
-    console.log("ventaActual:", ventaActual);
-
     if (!ventaActual || ventaActual.length === 0) {
       alert("❌ No hay productos en la venta");
       return;
@@ -568,7 +510,6 @@ if (btnFinalizar) {
       return;
     }
 
-    // Crear objeto de venta
     const venta = {
       items: JSON.parse(JSON.stringify(ventaActual)),
       total: totalVenta,
@@ -576,27 +517,18 @@ if (btnFinalizar) {
       fecha: new Date().toLocaleString()
     };
 
-    console.log("Venta a guardar:", venta);
-
-    // Asegurar que el usuario existe en data
     if (!data[usuarioActual]) {
       data[usuarioActual] = { ventas: [] };
     }
 
-    // Guardar venta
     data[usuarioActual].ventas.push(venta);
     localStorage.setItem("dataPOS", JSON.stringify(data));
 
-    console.log("Venta guardada en localStorage");
-
-    // Renderizar la tarjeta
     renderVenta(venta);
 
-    // Limpiar y cerrar
     reset();
     if (modal) modal.close();
 
-    // Actualizar totales
     actualizarTotalDia();
     actualizarGanancias();
     renderHistorial();
@@ -638,9 +570,22 @@ function reset() {
   totalVenta = 0;
   actualizarTotalVenta();
   renderPreVenta();
-  if (selectProducto) selectProducto.value = "";
-  if (input) input.value = "";
-  if (preview) preview.textContent = "";
+  selectProducto.value = "";
+  inputCantidad.value = "1";
+  inputNombreLibre.value = "";
+  inputCantidadLibre.value = "1";
+  inputPrecioLibre.value = "";
+  previewCatalogo.textContent = "";
+  previewLibre.textContent = "";
+  modoVenta = "catalogo";
+  
+  // Reset tabs
+  modooCatalogo.classList.remove("hidden");
+  modoLibre.classList.add("hidden");
+  tabCatalogo.classList.add("border-b-2", "border-blue-600", "text-blue-600", "font-bold");
+  tabCatalogo.classList.remove("text-gray-600", "border-transparent");
+  tabLibre.classList.remove("border-b-2", "border-blue-600", "text-blue-600", "font-bold");
+  tabLibre.classList.add("text-gray-600", "border-transparent");
 }
 
 // ======================================
@@ -673,7 +618,6 @@ function renderVenta(v) {
     </div>
   `;
 
-  // Descargar ticket como imagen
   const btnTicket = div.querySelector(".bg-blue-500");
   if (btnTicket && typeof html2canvas !== "undefined") {
     btnTicket.onclick = () => {
@@ -686,7 +630,6 @@ function renderVenta(v) {
     };
   }
 
-  // Eliminar venta
   const btnEliminar = div.querySelector(".text-red-500");
   if (btnEliminar) {
     btnEliminar.onclick = () => {
@@ -742,16 +685,10 @@ function renderHistorial() {
 const btnNuevaVenta = document.getElementById("btnNuevaVenta");
 if (btnNuevaVenta) {
   btnNuevaVenta.onclick = () => {
-    console.log("btnNuevaVenta clicked");
     reset();
     if (modal) {
       modal.showModal();
-      console.log("Modal abierto");
-      if (selectProducto) {
-        selectProducto.focus();
-      }
-    } else {
-      console.error("Modal no encontrado");
+      selectProducto.focus();
     }
   };
 }
@@ -913,9 +850,7 @@ if (btnLogout) {
 function actualizarGanancias() {
   if (usuarioActual !== "ADMIN") return;
 
-  if (!data[usuarioActual]) {
-    return;
-  }
+  if (!data[usuarioActual]) return;
 
   const ventas = data[usuarioActual].ventas || [];
 
@@ -972,14 +907,11 @@ const btnInstall = document.getElementById("btnInstall");
 if (btnInstall) {
   btnInstall.onclick = async () => {
     if (!deferredPrompt) return;
-
     deferredPrompt.prompt();
     const result = await deferredPrompt.userChoice;
-
     if (result.outcome === "accepted") {
       console.log("✓ Instalada correctamente");
     }
-
     deferredPrompt = null;
   };
 }
@@ -1021,7 +953,6 @@ window.addEventListener("storage", (event) => {
   if (event.key === "inventarioPOS") {
     console.log("📡 Inventario actualizado desde otra pestaña");
     inventario = JSON.parse(event.newValue) || [];
-    actualizarSugerencias();
     actualizarSelectProductos();
   }
 });
