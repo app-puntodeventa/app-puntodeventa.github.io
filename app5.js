@@ -1,30 +1,6 @@
-"use strict";
-
-/* =====================================================
-🔐 ESTADO GLOBAL
-===================================================== */
-
-const STORAGE_DATA = "dataPOS";
-const STORAGE_INV = "inventarioPOS";
-const STORAGE_USER = "usuarioActivo";
-
-let usuarioActual = localStorage.getItem(STORAGE_USER);
-let ventaActual = [];
-let totalVenta = 0;
-
-let data = JSON.parse(localStorage.getItem(STORAGE_DATA)) || {};
-let inventario = (JSON.parse(localStorage.getItem(STORAGE_INV)) || [])
-  .map(normalizarProducto);
-
-/* =====================================================
-🧠 UTILIDADES
-===================================================== */
-
-function saveAll() {
-  localStorage.setItem(STORAGE_DATA, JSON.stringify(data));
-  localStorage.setItem(STORAGE_INV, JSON.stringify(inventario));
-}
-
+/************************************
+ * 🧼 UTILIDADES BASE
+ ************************************/
 function normalizarProducto(p) {
   return {
     id: p.id || Date.now(),
@@ -37,44 +13,53 @@ function normalizarProducto(p) {
   };
 }
 
-function norm(t) {
-  return (t || "")
+function normalizar(texto) {
+  return (texto || "")
     .toLowerCase()
     .trim()
     .replace(/\s+/g, " ")
     .replace(/[^\w\s]/g, "");
 }
 
-function escapeHTML(t) {
-  return (t || "")
+function escaparHTML(texto) {
+  return (texto || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
-function extraerNombre(t) {
-  return (t || "")
-    .toLowerCase()
-    .replace(/\d+/g, "")
-    .replace(/\b(kilos?|kg|pieza?s?|pzas?|de|x|cada|uno|por)\b/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
+/************************************
+ * 🔐 ESTADO GLOBAL
+ ************************************/
+let usuarioActual = null;
+let ventaActual = [];
+let totalVenta = 0;
 
-/* =====================================================
-📦 INVENTARIO
-===================================================== */
+let data = JSON.parse(localStorage.getItem("dataPOS")) || {};
+
+let inventario = (JSON.parse(localStorage.getItem("inventarioPOS")) || [])
+  .map(normalizarProducto);
+
+/************************************
+ * 📦 INVENTARIO
+ ************************************/
+function guardarInventario() {
+  localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
+}
 
 function buscarProducto(nombre) {
-  const n = norm(nombre);
+  const n = normalizar(nombre);
 
   return inventario.find(p => {
-    const base = norm(p.nombre);
+    const base = normalizar(p.nombre);
 
-    const matchNombre = n.includes(base) || base.includes(n);
+    const matchNombre =
+      n.includes(base) || base.includes(n);
 
     const matchAlias = (p.alias || []).some(a => {
-      const al = norm(a);
+      const al = normalizar(a);
       return n.includes(al) || al.includes(n);
     });
 
@@ -82,31 +67,54 @@ function buscarProducto(nombre) {
   });
 }
 
-function registrarInventario(item) {
-  const nombre = extraerNombre(item.texto);
-  let p = buscarProducto(nombre);
+/************************************
+ * 🧠 PARSER
+ ************************************/
+function parsear(texto) {
+  const t = texto.toLowerCase();
+  const nums = t.match(/\d+(\.\d+)?/g)?.map(Number) || [];
 
-  if (!p) {
-    p = normalizarProducto({
-      nombre,
-      stock: 0,
-      costo: item.costoUnitario || 0,
-      precioVenta: item.precio,
-      unidad: item.unidad,
-      alias: [nombre]
-    });
-    inventario.push(p);
+  let cantidad = 1;
+  let precioUnitario = 0;
+  let unidad = "pieza";
+
+  if (t.includes("kg") || t.includes("kilo")) unidad = "kg";
+
+  if (nums.length === 1) precioUnitario = nums[0];
+
+  if (nums.length >= 2) {
+    cantidad = nums[0];
+    precioUnitario = nums[1];
   }
 
-  p.stock = Math.max(0, (p.stock || 0) - item.cantidad);
+  const subtotal = cantidad * precioUnitario;
 
-  saveAll();
+  return { texto, cantidad, precioUnitario, unidad, subtotal };
 }
 
-/* =====================================================
-🔐 LOGIN
-===================================================== */
+function extraerNombre(texto) {
+  return (texto || "")
+    .toLowerCase()
+    .replace(/\d+/g, "")
+    .replace(/\b(kilos?|kg|pieza?s?|pzas?|de|a|x|cada|uno|por|pesos?)\b/g, "")
+    .trim();
+}
 
+/************************************
+ * 🎯 DOM
+ ************************************/
+const modal = document.getElementById("modal");
+const input = document.getElementById("inputProducto");
+const preview = document.getElementById("preview");
+const preVenta = document.getElementById("preVenta");
+
+const totalVentaSpan = document.getElementById("totalVenta");
+const totalDiaSpan = document.getElementById("totalDia");
+const listaVentas = document.getElementById("listaVentas");
+
+/************************************
+ * 🔐 LOGIN
+ ************************************/
 const VALID_PINS = {
   "4829": "ADMIN",
   "7391": "TURNO 1",
@@ -122,55 +130,55 @@ document.getElementById("btnLogin").onclick = () => {
 
   if (!data[usuarioActual]) data[usuarioActual] = { ventas: [] };
 
-  localStorage.setItem(STORAGE_USER, usuarioActual);
+  localStorage.setItem("usuarioActivo", usuarioActual);
 
   document.getElementById("loginScreen").style.display = "none";
 
   init();
 };
 
-/* =====================================================
-🚀 INIT
-===================================================== */
-
+/************************************
+ * 🚀 INIT
+ ************************************/
 function init() {
-  if (!usuarioActual) {
+  const user = localStorage.getItem("usuarioActivo");
+
+  if (!user) {
     document.getElementById("loginScreen").style.display = "flex";
     return;
   }
 
-  document.getElementById("loginScreen").style.display = "none";
+  usuarioActual = user;
+
   document.getElementById("userLabel").textContent = usuarioActual;
 
   renderHistorial();
-  actualizarUI();
+  actualizarTotalDia();
+  renderProductosRapidos();
+  actualizarSugerencias();
 }
 
-/* =====================================================
-🧠 PARSER
-===================================================== */
+/************************************
+ * 👀 PREVIEW
+ ************************************/
+input.addEventListener("input", () => {
+  const v = input.value.trim();
+  if (!v) return preview.textContent = "";
 
-function parsear(texto) {
-  const nums = texto.match(/\d+(\.\d+)?/g)?.map(Number) || [];
+  const d = parsear(v);
+  const nombre = extraerNombre(v);
+  const producto = buscarProducto(nombre);
 
-  let cantidad = nums[0] || 1;
-  let precio = nums[1] || nums[0] || 0;
+  if (producto) {
+    preview.textContent = `📦 ${producto.nombre} | $${producto.precioVenta}`;
+  } else {
+    preview.textContent = `${d.cantidad} x ${d.precioUnitario} = $${d.subtotal}`;
+  }
+});
 
-  return {
-    texto,
-    cantidad,
-    precio,
-    subtotal: cantidad * precio
-  };
-}
-
-/* =====================================================
-➕ VENTAS
-===================================================== */
-
-const input = document.getElementById("inputProducto");
-const preview = document.getElementById("preview");
-
+/************************************
+ * ➕ AGREGAR VENTA
+ ************************************/
 function agregar() {
   const v = input.value.trim();
   if (!v) return;
@@ -178,55 +186,60 @@ function agregar() {
   const d = parsear(v);
 
   const item = {
-    texto: v,
+    texto: d.texto,
     cantidad: d.cantidad,
-    precio: d.precio,
-    subtotal: d.subtotal,
-    costoUnitario: 0
+    unidad: d.unidad,
+    precio: d.precioUnitario,
+    subtotal: d.subtotal
   };
-
-  registrarInventario(item);
 
   ventaActual.push(item);
   totalVenta += item.subtotal;
 
-  actualizarUI();
+  actualizarTotalVenta();
+  renderPreVenta();
 
   input.value = "";
   preview.textContent = "";
 }
 
+document.getElementById("btnAdd").onclick = agregar;
+
 input.addEventListener("keydown", e => {
   if (e.key === "Enter") agregar();
 });
 
-document.getElementById("btnAdd").onclick = agregar;
-
-/* =====================================================
-🧾 PREVENTA
-===================================================== */
-
+/************************************
+ * 🧾 PREVENTA
+ ************************************/
 function renderPreVenta() {
-  const el = document.getElementById("preVenta");
-  el.innerHTML = "";
+  preVenta.innerHTML = "";
 
-  ventaActual.forEach((i, idx) => {
+  ventaActual.forEach((item, i) => {
     const div = document.createElement("div");
 
-    div.className = "flex justify-between p-2 bg-gray-100 rounded";
+    div.className = "flex justify-between bg-gray-100 p-2 rounded";
+
     div.innerHTML = `
-      <span>${escapeHTML(i.texto)}</span>
-      <span>$${i.subtotal}</span>
+      <span>${escaparHTML(item.texto)}</span>
+      <span>$${item.subtotal}</span>
+      <button>🗑</button>
     `;
 
-    el.appendChild(div);
+    div.querySelector("button").onclick = () => {
+      totalVenta -= item.subtotal;
+      ventaActual.splice(i, 1);
+      actualizarTotalVenta();
+      renderPreVenta();
+    };
+
+    preVenta.appendChild(div);
   });
 }
 
-/* =====================================================
-💰 FINALIZAR VENTA
-===================================================== */
-
+/************************************
+ * 💰 FINALIZAR
+ ************************************/
 document.getElementById("btnFinalizar").onclick = () => {
   if (!ventaActual.length) return;
 
@@ -238,93 +251,92 @@ document.getElementById("btnFinalizar").onclick = () => {
   };
 
   data[usuarioActual].ventas.push(venta);
-
-  saveAll();
+  localStorage.setItem("dataPOS", JSON.stringify(data));
 
   renderVenta(venta);
 
   reset();
+  modal.close();
+  actualizarTotalDia();
 };
 
-/* =====================================================
-🔄 RESET
-===================================================== */
+/************************************
+ * 📊 TOTALES
+ ************************************/
+function actualizarTotalVenta() {
+  totalVentaSpan.textContent = "$" + totalVenta;
+}
 
+function actualizarTotalDia() {
+  const ventas = data[usuarioActual]?.ventas || [];
+  const total = ventas.reduce((a, v) => a + v.total, 0);
+  totalDiaSpan.textContent = "$" + total;
+}
+
+/************************************
+ * 🔄 RESET
+ ************************************/
 function reset() {
   ventaActual = [];
   totalVenta = 0;
-  actualizarUI();
-}
-
-/* =====================================================
-📊 UI CENTRAL
-===================================================== */
-
-function actualizarUI() {
-  document.getElementById("totalVenta").textContent = "$" + totalVenta;
+  actualizarTotalVenta();
   renderPreVenta();
 }
 
-/* =====================================================
-🧾 HISTORIAL
-===================================================== */
+/************************************
+ * 🧾 RENDER VENTA
+ ************************************/
+function renderVenta(v) {
+  const div = document.createElement("div");
+  div.className = "bg-yellow-100 p-4 rounded";
 
+  div.innerHTML = `
+    <div><b>${v.usuario}</b></div>
+    <div>${v.fecha}</div>
+    <div>Total: $${v.total}</div>
+  `;
+
+  listaVentas.prepend(div);
+}
+
+/************************************
+ * 📚 HISTORIAL
+ ************************************/
 function renderHistorial() {
-  const el = document.getElementById("listaVentas");
-  el.innerHTML = "";
+  listaVentas.innerHTML = "";
 
   const ventas = data[usuarioActual]?.ventas || [];
   ventas.forEach(renderVenta);
 }
 
-function renderVenta(v) {
-  const el = document.getElementById("listaVentas");
-
-  const div = document.createElement("div");
-  div.className = "p-3 bg-yellow-100 rounded";
-
-  div.innerHTML = `
-    <div><b>${v.usuario}</b></div>
-    <div>${v.fecha}</div>
-    <div><b>Total: $${v.total}</b></div>
-  `;
-
-  el.prepend(div);
+/************************************
+ * 🧾 PRODUCTOS RÁPIDOS
+ ************************************/
+function renderProductosRapidos() {
+  // opcional simple
 }
 
-/* =====================================================
-📦 SUGERENCIAS
-===================================================== */
+/************************************
+ * 📦 INVENTARIO VENTA
+ ************************************/
+function registrarVentaEnInventario(item) {
+  let p = buscarProducto(extraerNombre(item.texto));
 
-function actualizarSugerencias() {
-  const d = document.getElementById("sugerencias");
-  d.innerHTML = "";
+  if (!p) {
+    p = normalizarProducto({
+      nombre: item.texto,
+      stock: 0
+    });
 
-  inventario.forEach(p => {
-    const o = document.createElement("option");
-    o.value = p.nombre;
-    d.appendChild(o);
-  });
+    inventario.push(p);
+  }
+
+  p.stock = Math.max(0, (p.stock || 0) - item.cantidad);
+
+  guardarInventario();
 }
 
-/* =====================================================
-💸 GANANCIAS (ADMIN)
-===================================================== */
-
-function actualizarGanancias() {
-  if (usuarioActual !== "ADMIN") return;
-
-  const ventas = data[usuarioActual]?.ventas || [];
-
-  let total = 0;
-  ventas.forEach(v => total += v.total);
-
-  document.getElementById("gananciaIngresos").textContent = "$" + total;
-  document.getElementById("gananciaVentas").textContent = ventas.length;
-}
-
-/* =====================================================
-🚀 AUTO START
-===================================================== */
-
+/************************************
+ * 🔔 INIT AUTO
+ ************************************/
 init();
