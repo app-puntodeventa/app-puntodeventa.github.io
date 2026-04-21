@@ -223,10 +223,7 @@ input.addEventListener("input", () => {
 // 🔎 detectar producto en inventario
 const nombreDetectado = extraerNombre(v);
 
-const productoEncontrado = inventario.find(p =>
-  nombreDetectado.includes(p.nombre) ||
-  p.alias?.some(a => nombreDetectado.includes(a))
-);
+const productoEncontrado = buscarProducto(nombreDetectado);
 
   // preview inteligente único (sin pisarse)
 if (productoEncontrado) {
