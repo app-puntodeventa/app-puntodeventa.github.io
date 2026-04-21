@@ -250,10 +250,10 @@ if (productoEncontrado) {
 preview.textContent =
   `📦 ${productoEncontrado.nombre} | 💰 Venta: $${productoEncontrado.precioVenta || 0}`;
 
-} else if (d.multi) {
+} else if (d.modoLote) {
 
   preview.textContent =
-    `${d.cantidad} x ${d.precio} = $${d.cantidad * d.precio}`;
+    `${d.cantidad} x ${d.precioUnitario} = $${d.cantidad * d.precioUnitario}`;
 
 } else {
 
@@ -314,9 +314,9 @@ function agregar() {
   let subtotal;
 
 if (d.unidad === "kg") {
-  subtotal = d.cantidad * d.precio;
+  subtotal = d.cantidad * d.precioUnitario;
 } else {
-  subtotal = d.multi ? d.cantidad * d.precio : d.precio;
+  subtotal = d.modoLote ? d.cantidad * d.precioUnitario : d.precioUnitario;
 }
 
 const nombre = extraerNombre(d.texto);
@@ -332,7 +332,7 @@ producto = {
   stock: 0,
   unidad: d.unidad,
   costo: null,
-  precioVenta: d.precio,
+  precioVenta: d.precioUnitario,
   alias: [nombre],
   creadoDesdeVenta: true
 };
@@ -372,7 +372,7 @@ if (!producto) {
 producto = {
   nombre: nombre.trim(),
   stock: 0,
-  precioVenta: Number(d.precio) > 0 ? Number(d.precio) : null,
+  precioVenta: Number(d.precioUnitario) > 0 ? Number(d.precioUnitario) : null,
 costo: null,
   unidad: d.unidad,
   alias: [nombre]
@@ -403,14 +403,14 @@ if (producto.stock < 0) {
 
 // 💰 SOLO actualizar precio de venta, NO costo
 // 🔥 SOLO actualizar precio si el usuario lo repite conscientemente
-if (producto.precioVenta && producto.precioVenta !== d.precio) {
+if (producto.precioVenta && producto.precioVenta !== d.precioUnitario) {
 
   const confirmar = confirm(
-    `¿Actualizar precio de ${producto.nombre} de $${producto.precioVenta} a $${d.precio}?`
+    `¿Actualizar precio de ${producto.nombre} de $${producto.precioVenta} a $${d.precioUnitario}?`
   );
 
   if (confirmar) {
-    producto.precioVenta = d.precio;
+    producto.precioVenta = d.precioUnitario;
   }
 
 }
@@ -461,8 +461,8 @@ ventaActual.push({
   texto: d.texto,
   cantidad: d.cantidad,
   unidad: "pieza",
-  precio: d.precio,
-  multi: d.multi,
+  precio: d.precioUnitario,
+  multi: d.modoLote,
   subtotal,
   costoUnitario: costoBase,
   ganancia: gananciaEstimada
