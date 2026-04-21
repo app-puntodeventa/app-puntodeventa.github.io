@@ -375,13 +375,13 @@ inventario.push(producto);
 
 } else {
 
-  // si existe, solo descuenta stock
-  if (typeof producto.stock !== "number") {
-    producto.stock = d.cantidad;
-  } else {
-    producto.stock -= d.cantidad;
-  }
+  // 🧠 asegurar stock siempre válido
+  producto.stock = Number(producto.stock || 0);
 
+  // 🧠 descontar sin romper
+  producto.stock = producto.stock - d.cantidad;
+
+  // 🚫 evitar negativos
   if (producto.stock < 0) producto.stock = 0;
 }
 
