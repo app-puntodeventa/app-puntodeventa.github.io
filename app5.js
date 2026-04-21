@@ -386,6 +386,7 @@ ventaActual.push({
   usuario: usuarioActual,
   texto: d.texto,
   cantidad: d.cantidad,
+  unidad: "pieza",
   precio: d.precio,
   multi: d.multi,
   subtotal,
