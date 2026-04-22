@@ -53,7 +53,6 @@ let usuarioActual = null;
 let ventaActual = [];
 let totalVenta = 0;
 let modoVenta = "catalogo";
-let montoPageado = 0;
 
 let data = JSON.parse(localStorage.getItem("dataPOS")) || {};
 let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
@@ -68,6 +67,15 @@ function normalizar(texto) {
     .trim()
     .replace(/\s+/g, " ")
     .replace(/[^\w\sáéíóúñ]/g, "");
+}
+
+function normalizarTexto(texto) {
+  return (texto || "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 function buscarProducto(nombre) {
@@ -170,12 +178,13 @@ const modoCatalogo = document.getElementById("modoCatalogo");
 const modoLibre = document.getElementById("modoLibre");
 const modoBeta = document.getElementById("modoBeta");
 
-// Modal de cambio
+const carritoContainer = document.getElementById("carritoContainer");
+const btnFinalizarContainer = document.getElementById("btnFinalizarContainer");
+
+// Modal de cambio (AHORA OPCIONAL)
 const modalCambio = document.getElementById("modalCambio");
 const inputMontoPagado = document.getElementById("inputMontoPagado");
 const totalVentaCambio = document.getElementById("totalVentaCambio");
-const montoACambiar = document.getElementById("montoACambiar");
-const btnCalcularCambio = document.getElementById("btnCalcularCambio");
 const cambioSpan = document.getElementById("cambio");
 
 // ======================================
@@ -269,19 +278,16 @@ tabs.forEach((item, idx) => {
     item.tab.onclick = () => {
       modoVenta = item.name;
       
-      // Ocultar todos
       tabs.forEach(t => {
         t.modo.classList.add("hidden");
         t.tab.classList.remove("border-b-2", "border-blue-600", "text-blue-600", "font-bold");
         t.tab.classList.add("text-gray-600");
       });
 
-      // Mostrar el actual
       item.modo.classList.remove("hidden");
       item.tab.classList.add("border-b-2", "border-blue-600", "text-blue-600", "font-bold");
       item.tab.classList.remove("text-gray-600");
 
-      // Focus
       if (item.name === "libre") inputNombreLibre.focus();
       if (item.name === "beta") inputBeta.focus();
     };
@@ -289,7 +295,7 @@ tabs.forEach((item, idx) => {
 });
 
 // ======================================
-// 🔍 BÚSQUEDA DE PRODUCTOS (MEJORADO)
+// 🔍 BÚSQUEDA DE PRODUCTOS
 // ======================================
 
 if (searchProducto) {
@@ -309,14 +315,12 @@ if (searchProducto) {
       }
     });
 
-    // Auto-seleccionar la primera coincidencia
     if (primeraCoincidencia) {
       selectProducto.value = primeraCoincidencia;
       actualizarPreviewCatalogo();
     }
   });
 
-  // Agregar al presionar Enter en la búsqueda
   searchProducto.addEventListener("keypress", (e) => {
     if (e.key === "Enter") {
       document.getElementById("btnAgregarCatalogo").click();
@@ -394,7 +398,7 @@ function actualizarPreviewLibre() {
 }
 
 // ======================================
-// 🧠 PARSER ULTRA INTELIGENTE (IA MEJORADO)
+// 🧠 PARSER IA MEJORADO (INTELIGENCIA REAL)
 // ======================================
 
 function parseIA(texto) {
@@ -407,10 +411,9 @@ function parseIA(texto) {
   }
 
   if (resultado.data.length === 0) {
-    return { esValido: false, error: "No reconozco productos en ese texto" };
+    return { esValido: false, error: "No reconozco el formato" };
   }
 
-  // Convertir el resultado a formato de venta
   const ventas = formatearParaVenta(resultado.data);
 
   return {
@@ -441,27 +444,24 @@ if (inputBeta) {
     previewBeta.classList.remove("hidden");
 
     let total = 0;
-    let html = '<div class="space-y-2">';
+    let html = '<div class="space-y-1 text-xs">';
 
-    resultado.productos.forEach((p, idx) => {
-      const precioEstimado = p.precioPorUnidad || p.precioTotal || 0;
-      const precioFinal = p.precioTotal || (p.cantidad * precioEstimado);
+    resultado.productos.forEach((p) => {
+      const precioFinal = p.precioTotal || (p.cantidad * (p.precioPorUnidad || 0));
       total += precioFinal;
 
       html += `
-        <div class="border-b pb-2 last:border-b-0">
-          <div class="flex justify-between text-sm">
-            <span class="font-bold">📦 ${p.descripcion}</span>
-            <span class="text-green-600 font-bold">$${precioFinal.toFixed(2)}</span>
-          </div>
+        <div class="flex justify-between border-b pb-1">
+          <span>${p.descripcion}</span>
+          <span class="text-green-600 font-bold">$${precioFinal.toFixed(2)}</span>
         </div>
       `;
     });
 
     html += `
-      <div class="border-t pt-2 mt-2 font-bold flex justify-between">
-        <span>Total ${resultado.productos.length} items:</span>
-        <span class="text-green-600 text-lg">$${total.toFixed(2)}</span>
+      <div class="border-t pt-1 mt-1 font-bold flex justify-between">
+        <span>Total:</span>
+        <span class="text-green-600">$${total.toFixed(2)}</span>
       </div>
     </div>`;
 
@@ -470,7 +470,7 @@ if (inputBeta) {
 }
 
 // ======================================
-// ➕ AGREGAR - BETA (IA) MEJORADO
+// ➕ AGREGAR - BETA (IA)
 // ======================================
 
 if (btnAgregarBeta) {
@@ -483,13 +483,12 @@ if (btnAgregarBeta) {
     const resultado = parseIA(inputBeta.value);
 
     if (!resultado.esValido) {
-      alert(`❌ ${resultado.error}\n\nEjemplos:\n• "3 kg de huevo a 30" (3 kg a $30 c/u = $90)\n• "5 elotes de a 5" (5 × $5 = $25)\n• "2 latas de frijol de 4" (2 × $4 = $8)\n• "3 de 9" (3 × $9 = $27)\n• "20 de jamón" ($20 de jamón)\n• "1 litro de leche" (1 litro)`);
+      alert(`❌ ${resultado.error}\n\nFormatos válidos:\n• "90 de salchicha" ($90)\n• "3 de 9" (3×$9=$27)\n• "2 litros de leche" (sin precio)\n• "5 elotes de a 5" (5×$5)`);
       return;
     }
 
-    // Procesar todos los productos del parse
     resultado.productos.forEach(p => {
-      // Solo agregar al inventario si hay nombre de producto
+      // Solo guardar en inventario si hay nombre de producto
       if (p.producto && p.producto.trim() !== "") {
         const productoObj = actualizarProductoInventario(
           p.producto,
@@ -518,9 +517,8 @@ if (btnAgregarBeta) {
           ganancia
         });
       } else {
-        // Si no hay nombre de producto, solo registra la venta sin guardar en inventario
-        const precioFinal = p.precioPorUnidad || (p.precioTotal / p.cantidad);
-        const subtotal = p.precioTotal || (p.cantidad * precioFinal);
+        // Sin nombre de producto, solo registra la venta
+        const subtotal = p.precioTotal || (p.cantidad * (p.precioPorUnidad || 0));
 
         ventaActual.push({
           id: Date.now() + Math.random(),
@@ -528,7 +526,7 @@ if (btnAgregarBeta) {
           texto: p.descripcion,
           cantidad: p.cantidad || 1,
           unidad: p.unidad || "pieza",
-          precio: precioFinal,
+          precio: p.precioPorUnidad || 0,
           subtotal,
           costo: 0,
           ganancia: 0
@@ -544,9 +542,13 @@ if (btnAgregarBeta) {
     actualizarSelectProductos();
     renderPreVenta();
     navigator.vibrate?.(50);
-
-    console.log(`✅ ${resultado.productos.length} producto(s) agregado(s)`);
   };
+
+  inputBeta.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      btnAgregarBeta.click();
+    }
+  });
 }
 
 // ======================================
@@ -657,17 +659,8 @@ document.getElementById("btnAgregarLibre").onclick = () => {
   navigator.vibrate?.(30);
 };
 
-if (inputBeta) {
-  inputBeta.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") {
-      btnAgregarBeta.click();
-      inputBeta.focus();
-    }
-  });
-}
-
 // ======================================
-// 🧾 PREVENTA
+// 🧾 PREVENTA (CARRITO MEJOR OPTIMIZADO)
 // ======================================
 
 function renderPreVenta() {
@@ -676,19 +669,19 @@ function renderPreVenta() {
   preVenta.innerHTML = "";
 
   if (ventaActual.length === 0) {
-    preVenta.innerHTML = '<p class="text-center text-gray-400 text-sm py-4">Carrito vacío</p>';
+    preVenta.innerHTML = '<p class="text-center text-gray-400 text-xs py-2">Carrito vacío</p>';
     return;
   }
 
   ventaActual.forEach((item, i) => {
     const div = document.createElement("div");
-    div.className = "flex justify-between bg-gray-50 p-2 rounded items-center border border-gray-200 text-sm";
+    div.className = "flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-200 text-xs sm:text-sm";
 
     div.innerHTML = `
-      <span>${escaparHTML(item.texto)}</span>
-      <div class="flex gap-2 items-center">
-        <span class="font-bold">$${item.subtotal.toFixed(2)}</span>
-        <button class="text-red-500 p-1 hover:bg-red-100 rounded transition">
+      <span class="truncate flex-1">${escaparHTML(item.texto)}</span>
+      <div class="flex gap-1 items-center flex-shrink-0 ml-2">
+        <span class="font-bold text-green-600">$${item.subtotal.toFixed(2)}</span>
+        <button class="text-red-500 p-1 hover:bg-red-100 rounded transition text-xs">
           <i class="bi bi-trash"></i>
         </button>
       </div>
@@ -706,67 +699,7 @@ function renderPreVenta() {
 }
 
 // ======================================
-// 💰 MODAL DE CAMBIO
-// ======================================
-
-function mostrarModalCambio() {
-  if (!modalCambio) return;
-
-  totalVentaCambio.textContent = `$${totalVenta.toFixed(2)}`;
-  inputMontoPagado.value = "";
-  montoACambiar.textContent = "$0.00";
-  cambioSpan.textContent = "$0.00";
-  cambioSpan.className = "text-lg font-bold";
-
-  modalCambio.showModal();
-  inputMontoPagado.focus();
-}
-
-function calcularCambio() {
-  const montoPagado = parseFloat(inputMontoPagado.value) || 0;
-
-  if (montoPagado <= 0) {
-    alert("❌ Ingresa un monto válido");
-    return;
-  }
-
-  if (montoPagado < totalVenta) {
-    alert(`❌ Monto insuficiente. Faltan $${(totalVenta - montoPagado).toFixed(2)}`);
-    return;
-  }
-
-  const cambio = montoPagado - totalVenta;
-  cambioSpan.textContent = `$${cambio.toFixed(2)}`;
-  cambioSpan.className = "text-lg font-bold text-green-600";
-  montoACambiar.textContent = `$${cambio.toFixed(2)}`;
-
-  // Auto-cerrar después de 2 segundos si es exacto
-  if (cambio === 0) {
-    setTimeout(() => {
-      finalizarVentaDesdeCambio();
-    }, 1500);
-  }
-}
-
-function finalizarVentaDesdeCambio() {
-  if (modalCambio) modalCambio.close();
-  finalizarVenta();
-}
-
-if (inputMontoPagado) {
-  inputMontoPagado.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") {
-      calcularCambio();
-    }
-  });
-}
-
-if (btnCalcularCambio) {
-  btnCalcularCambio.onclick = calcularCambio;
-}
-
-// ======================================
-// 💰 FINALIZAR VENTA
+// 💰 FINALIZAR VENTA (FLUJO CORRECTO)
 // ======================================
 
 function finalizarVenta() {
@@ -787,17 +720,23 @@ function finalizarVenta() {
     data[usuarioActual] = { ventas: [] };
   }
 
+  // GUARDAR VENTA PRIMERO
   data[usuarioActual].ventas.push(venta);
   localStorage.setItem("dataPOS", JSON.stringify(data));
 
+  // RENDERIZAR EN HISTORIAL
   renderVenta(venta);
+  
+  // LIMPIAR
   reset();
   if (modal) modal.close();
 
+  // ACTUALIZAR TOTALES
   actualizarTotalDia();
   actualizarGanancias();
   renderHistorial();
 
+  // VERIFICAR LÍMITE DEMO
   if (!checkDemoLimit()) {
     setTimeout(() => {
       document.getElementById("licenseModal").classList.add("active");
@@ -805,11 +744,64 @@ function finalizarVenta() {
   }
 
   alert("✅ Venta registrada");
+
+  // OFERTAR CAMBIO DE FORMA OPCIONAL
+  setTimeout(() => {
+    mostrarModalCambio();
+  }, 500);
 }
 
-document.getElementById("btnFinalizar").onclick = () => {
-  mostrarModalCambio();
-};
+// ======================================
+// 💰 MODAL DE CAMBIO (AUXILIAR, NO OBLIGATORIO)
+// ======================================
+
+function mostrarModalCambio() {
+  if (!modalCambio) return;
+
+  totalVentaCambio.textContent = `$${totalVenta.toFixed(2)}`;
+  inputMontoPagado.value = "";
+  cambioSpan.textContent = "$0.00";
+  cambioSpan.className = "text-xl font-bold";
+
+  modalCambio.showModal();
+  inputMontoPagado.focus();
+}
+
+function calcularCambio() {
+  const montoPagado = parseFloat(inputMontoPagado.value) || 0;
+
+  if (montoPagado <= 0) {
+    alert("❌ Ingresa un monto válido");
+    return;
+  }
+
+  if (montoPagado < totalVenta) {
+    cambioSpan.textContent = "❌ Monto insuficiente";
+    cambioSpan.className = "text-xl font-bold text-red-600";
+    return;
+  }
+
+  const cambio = montoPagado - totalVenta;
+  cambioSpan.textContent = `$${cambio.toFixed(2)}`;
+  cambioSpan.className = "text-2xl font-bold text-green-600";
+}
+
+if (inputMontoPagado) {
+  inputMontoPagado.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      calcularCambio();
+    }
+  });
+
+  inputMontoPagado.addEventListener("input", () => {
+    cambioSpan.textContent = "$0.00";
+    cambioSpan.className = "text-xl font-bold";
+  });
+}
+
+document.getElementById("btnCalcularCambio").onclick = calcularCambio;
+
+document.getElementById("btnFinalizar").onclick = finalizarVenta;
 
 // ======================================
 // 📊 TOTALES
@@ -842,7 +834,6 @@ function actualizarTotalDia() {
 function reset() {
   ventaActual = [];
   totalVenta = 0;
-  montoPageado = 0;
   actualizarTotalVenta();
   renderPreVenta();
   selectProducto.value = "";
@@ -880,8 +871,8 @@ function renderVenta(v) {
   const itemsHTML = v.items
     .map(it => `
       <div class="flex justify-between text-sm border-b py-1">
-        <span>${escaparHTML(it.texto)}</span>
-        <span>$${(it.subtotal || 0).toFixed(2)}</span>
+        <span class="truncate flex-1">${escaparHTML(it.texto)}</span>
+        <span class="ml-2 flex-shrink-0">$${(it.subtotal || 0).toFixed(2)}</span>
       </div>
     `)
     .join("");
@@ -894,7 +885,7 @@ function renderVenta(v) {
       </div>
       <span class="text-xs bg-yellow-200 px-2 py-1 rounded">${v.items.length} items</span>
     </div>
-    <div class="bg-white rounded p-2 mb-2 text-sm">${itemsHTML}</div>
+    <div class="bg-white rounded p-2 mb-2 text-sm max-h-32 overflow-y-auto">${itemsHTML}</div>
     <div class="font-bold text-right text-lg text-green-600">Total: $${(v.total || 0).toFixed(2)}</div>
     <div class="flex gap-2 mt-3 flex-wrap">
       <button class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition btnTicket">📄 Ticket</button>
@@ -915,7 +906,6 @@ function renderVenta(v) {
     };
   }
 
-  // Generar QR
   const btnQR = div.querySelector(".btnQR");
   if (btnQR) {
     btnQR.onclick = () => {
@@ -949,7 +939,6 @@ function renderVenta(v) {
 // ======================================
 
 function generarQRVenta(v) {
-  // Crear datos del QR
   const datosVenta = {
     usuario: v.usuario,
     fecha: v.fecha,
@@ -963,20 +952,17 @@ function generarQRVenta(v) {
   };
 
   const datosJSON = JSON.stringify(datosVenta);
-
-  // Usar API de QR en línea
   const urlQR = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(datosJSON)}`;
 
-  // Crear modal para mostrar QR
   const modalQR = document.createElement("div");
-  modalQR.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
+  modalQR.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4";
   modalQR.innerHTML = `
-    <div class="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full mx-2">
+    <div class="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
       <h2 class="text-lg font-bold mb-4 text-center">📱 Código QR de Venta</h2>
       <img src="${urlQR}" alt="QR Code" class="w-full mb-4 p-4 bg-gray-50 rounded">
       <p class="text-xs text-center text-gray-600 mb-3">Venta: $${v.total.toFixed(2)}</p>
       <div class="flex gap-2">
-        <button onclick="this.parentElement.parentElement.parentElement.remove()" class="flex-1 bg-gray-400 hover:bg-gray-500 text-white px-3 py-2 rounded transition">
+        <button onclick="this.closest('.fixed').remove()" class="flex-1 bg-gray-400 hover:bg-gray-500 text-white px-3 py-2 rounded transition">
           Cerrar
         </button>
         <a href="${urlQR}" download="qr-${v.usuario}-${v.id}.png" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded transition text-center">
@@ -1104,7 +1090,6 @@ document.getElementById("btnPDF").onclick = () => {
   y += 10;
 
   let totalDia = 0;
-  let totalGanancia = 0;
 
   ventas.forEach((v, idx) => {
     if (y > pageHeight - 40) {
@@ -1221,7 +1206,6 @@ if (pinInput && togglePin) {
   };
 }
 
-// Demo hint
 document.addEventListener("DOMContentLoaded", () => {
   const demoHint = document.getElementById("demoHint");
   if (demoHint && !localStorage.getItem("usuarioActivo")) {
@@ -1231,13 +1215,4 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-console.log("✅ POS Pro v1.1 - Sistema iniciado con cambio automático y QR");
-
-function normalizarTexto(texto) {
-  return (texto || "")
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, " ")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
+console.log("✅ POS Pro v2.0 - Sistema optimizado para móvil");
