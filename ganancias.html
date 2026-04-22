@@ -4,143 +4,200 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>📊 Ganancias Detalladas</title>
+<title>Análisis de Ganancias - POS Pro</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
+<style>
+  * {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  .card-metric {
+    background: linear-gradient(135deg, var(--color-from), var(--color-to));
+    border-radius: 12px;
+    padding: 1.5rem;
+    color: white;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  }
+
+  .metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-top: 0.5rem;
+  }
+
+  .metric-label {
+    opacity: 0.9;
+    font-size: 0.9rem;
+  }
+
+  .table-responsive {
+    overflow-x: auto;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-excelente { background: #dcfce7; color: #166534; }
+  .badge-bueno { background: #bfdbfe; color: #1e40af; }
+  .badge-advertencia { background: #fef3c7; color: #92400e; }
+  .badge-bajo { background: #fee2e2; color: #b91c1c; }
+</style>
+
 </head>
 
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-50 min-h-screen flex flex-col">
 
 <!-- HEADER -->
-<header class="flex justify-between items-center bg-purple-600 text-white p-3 shadow sticky top-0 z-10">
-
-  <div class="font-bold text-lg flex items-center gap-2">
-    <i class="bi bi-graph-up-arrow"></i>
-    Análisis de Ganancias
-  </div>
-
-  <div class="flex gap-2">
-    <button id="btnExportar" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm transition">
-      📥 Exportar
-    </button>
-    <a href="index.html" class="bg-white text-purple-600 px-3 py-1 rounded text-sm font-bold">
+<header class="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-4 shadow-lg sticky top-0 z-20">
+  <div class="flex justify-between items-center">
+    <div class="font-bold text-lg flex items-center gap-2">
+      <i class="bi bi-graph-up"></i> Análisis de Ganancias
+    </div>
+    <a href="index.html" class="bg-white text-purple-600 px-4 py-2 rounded font-bold hover:shadow-lg transition">
       ← Volver
     </a>
   </div>
-
 </header>
 
-<!-- RESUMEN GENERAL -->
-<div class="p-4 grid gap-4">
-
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-
-    <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-4 rounded shadow-lg">
-      <p class="text-blue-100 text-sm flex items-center gap-1">
-        <i class="bi bi-cash-coin"></i> Ingresos totales
-      </p>
-      <p id="totalIngresos" class="text-3xl font-bold">$0</p>
+<!-- MÉTRICAS PRINCIPALES -->
+<div class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+  <div class="card-metric" style="--color-from: #3b82f6; --color-to: #1e40af;">
+    <div class="metric-label flex items-center gap-1">
+      <i class="bi bi-cash-coin"></i> Ingresos Totales
     </div>
-
-    <div class="bg-gradient-to-br from-red-500 to-red-600 text-white p-4 rounded shadow-lg">
-      <p class="text-red-100 text-sm flex items-center gap-1">
-        <i class="bi bi-box-seam"></i> Costo total
-      </p>
-      <p id="totalCostoProduccion" class="text-3xl font-bold">$0</p>
-    </div>
-
-    <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-4 rounded shadow-lg">
-      <p class="text-green-100 text-sm flex items-center gap-1">
-        <i class="bi bi-graph-up"></i> Ganancia neta
-      </p>
-      <p id="gananciaNeta" class="text-3xl font-bold">$0</p>
-    </div>
-
-    <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-4 rounded shadow-lg">
-      <p class="text-purple-100 text-sm flex items-center gap-1">
-        <i class="bi bi-percent"></i> Margen
-      </p>
-      <p id="margenPorcentaje" class="text-3xl font-bold">0%</p>
-    </div>
-
+    <div class="metric-value">$<span id="metricIngresos">0</span></div>
   </div>
 
-  <!-- FILTROS -->
-  <div class="bg-white p-3 rounded shadow flex gap-2 flex-wrap">
-    <label class="flex items-center gap-2 text-sm">
-      <input type="checkbox" id="filtroSoloConCosto" checked>
-      <span>Solo productos con costo registrado</span>
-    </label>
-    <button id="btnActualizar" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition">
-      🔄 Actualizar
-    </button>
+  <div class="card-metric" style="--color-from: #ef4444; --color-to: #991b1b;">
+    <div class="metric-label flex items-center gap-1">
+      <i class="bi bi-box"></i> Costo Producción
+    </div>
+    <div class="metric-value">$<span id="metricCosto">0</span></div>
   </div>
 
-  <!-- TABLA DE PRODUCTOS -->
-  <div class="bg-white p-4 rounded shadow overflow-x-auto">
+  <div class="card-metric" style="--color-from: #22c55e; --color-to: #166534;">
+    <div class="metric-label flex items-center gap-1">
+      <i class="bi bi-graph-up"></i> Ganancia Neta
+    </div>
+    <div class="metric-value">$<span id="metricGanancia">0</span></div>
+  </div>
 
-    <h2 class="font-bold mb-3 text-lg flex items-center gap-2">
-      <i class="bi bi-list-ul"></i>
-      Desglose por producto
+  <div class="card-metric" style="--color-from: #a855f7; --color-to: #6b21a8;">
+    <div class="metric-label flex items-center gap-1">
+      <i class="bi bi-percent"></i> Margen
+    </div>
+    <div class="metric-value"><span id="metricMargen">0</span>%</div>
+  </div>
+</div>
+
+<!-- EXPLICACIÓN DE TÉRMINOS -->
+<div class="p-4">
+  <details class="bg-white rounded-lg shadow p-4 cursor-pointer">
+    <summary class="font-bold flex items-center gap-2">
+      <i class="bi bi-question-circle"></i> ¿Cómo entender los números?
+    </summary>
+    
+    <div class="mt-4 space-y-3 text-sm">
+      <div class="border-l-4 border-blue-500 pl-3">
+        <p class="font-bold text-blue-700">💰 Ingresos Totales</p>
+        <p class="text-gray-600">Todo el dinero que recibiste vendiendo productos.</p>
+      </div>
+
+      <div class="border-l-4 border-red-500 pl-3">
+        <p class="font-bold text-red-700">📌 Costo Producción</p>
+        <p class="text-gray-600">Lo que gastaste en comprar los productos que vendiste.</p>
+      </div>
+
+      <div class="border-l-4 border-green-500 pl-3">
+        <p class="font-bold text-green-700">✅ Ganancia Neta</p>
+        <p class="text-gray-600">Ingresos menos Costo = Lo que realmente ganaste.</p>
+        <p class="text-gray-600 text-xs mt-1">Fórmula: $Ingresos - $Costo = $Ganancia</p>
+      </div>
+
+      <div class="border-l-4 border-purple-500 pl-3">
+        <p class="font-bold text-purple-700">📈 Margen %</p>
+        <p class="text-gray-600">Porcentaje de ganancia sobre los ingresos.</p>
+        <p class="text-gray-600 text-xs mt-1">Fórmula: (Ganancia ÷ Ingresos) × 100</p>
+      </div>
+
+      <div class="bg-yellow-50 p-2 rounded text-xs mt-3">
+        <p class="font-bold">💡 Ejemplo:</p>
+        <p>Si vendes huevos por $100 y el costo fue $60:</p>
+        <p>Ganancia = $100 - $60 = $40</p>
+        <p>Margen = ($40 ÷ $100) × 100 = 40%</p>
+      </div>
+    </div>
+  </details>
+</div>
+
+<!-- DESGLOSE POR PRODUCTO -->
+<div class="p-4">
+  <div class="bg-white rounded-lg shadow p-4">
+    <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
+      <i class="bi bi-table"></i> Ganancia por Producto
     </h2>
 
-    <table class="w-full text-sm border-collapse">
-      <thead class="bg-gray-200">
-        <tr>
-          <th class="border p-2 text-left">📦 Producto</th>
-          <th class="border p-2 text-right">🔢 Cantidad</th>
-          <th class="border p-2 text-right">💰 Precio unit.</th>
-          <th class="border p-2 text-right">💳 Ingresos</th>
-          <th class="border p-2 text-right">📌 Costo unit.</th>
-          <th class="border p-2 text-right">🏭 Costo total</th>
-          <th class="border p-2 text-right">📊 Ganancia</th>
-          <th class="border p-2 text-right">📈 Margen %</th>
-        </tr>
-      </thead>
-      <tbody id="tablaProductos">
-        <tr><td colspan="8" class="text-center p-4 text-gray-400">Cargando...</td></tr>
-      </tbody>
-    </table>
-
+    <div class="table-responsive">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-100 border-b-2 border-gray-300">
+          <tr>
+            <th class="px-4 py-3 text-left font-bold">Producto</th>
+            <th class="px-4 py-3 text-center font-bold">Qty</th>
+            <th class="px-4 py-3 text-right font-bold">Ingresos</th>
+            <th class="px-4 py-3 text-right font-bold">Costo Total</th>
+            <th class="px-4 py-3 text-right font-bold">Ganancia</th>
+            <th class="px-4 py-3 text-center font-bold">Margen</th>
+          </tr>
+        </thead>
+        <tbody id="tablaProductos">
+          <tr><td colspan="6" class="text-center p-4 text-gray-400">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
+</div>
 
-  <!-- RESUMEN POR USUARIO (ADMIN) -->
-  <div id="resumenUsuarios" class="bg-white p-4 rounded shadow hidden">
-
-    <h2 class="font-bold mb-3 text-lg flex items-center gap-2">
-      <i class="bi bi-people"></i>
-      Resumen por usuario
+<!-- DESGLOSE POR USUARIO -->
+<div id="resumenUsuarios" class="p-4 hidden">
+  <div class="bg-white rounded-lg shadow p-4">
+    <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
+      <i class="bi bi-people"></i> Resumen por Usuario
     </h2>
 
-    <table class="w-full text-sm border-collapse">
-      <thead class="bg-gray-200">
-        <tr>
-          <th class="border p-2 text-left">👤 Usuario</th>
-          <th class="border p-2 text-right"># Ventas</th>
-          <th class="border p-2 text-right">💳 Ingresos</th>
-          <th class="border p-2 text-right">📊 Ganancia</th>
-          <th class="border p-2 text-right">📈 Margen %</th>
-        </tr>
-      </thead>
-      <tbody id="tablaUsuarios"></tbody>
-    </table>
-
+    <div class="table-responsive">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-100 border-b-2 border-gray-300">
+          <tr>
+            <th class="px-4 py-3 text-left font-bold">Usuario</th>
+            <th class="px-4 py-3 text-center font-bold"># Ventas</th>
+            <th class="px-4 py-3 text-right font-bold">Ingresos</th>
+            <th class="px-4 py-3 text-right font-bold">Ganancia</th>
+            <th class="px-4 py-3 text-center font-bold">Margen</th>
+          </tr>
+        </thead>
+        <tbody id="tablaUsuarios"></tbody>
+      </table>
+    </div>
   </div>
+</div>
 
-  <!-- HISTORIAL DE TRANSACCIONES -->
-  <div class="bg-white p-4 rounded shadow">
-
-    <h2 class="font-bold mb-3 text-lg flex items-center gap-2">
-      <i class="bi bi-clock-history"></i>
-      Últimas transacciones
+<!-- HISTORIAL -->
+<div class="p-4">
+  <div class="bg-white rounded-lg shadow p-4">
+    <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
+      <i class="bi bi-clock-history"></i> Últimas Transacciones
     </h2>
 
     <div id="historialTransacciones" class="space-y-2 max-h-96 overflow-y-auto"></div>
-
   </div>
-
 </div>
 
 <script src="ganancias.js"></script>
