@@ -4,428 +4,242 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>📦 Inventario</title>
+<title>Inventario Pro - POS</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#111827">
-
 <style>
-  .table-row-editable {
-    transition: all 0.3s ease;
+  * {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   }
-  
-  .table-row-editable:hover {
-    background-color: #f0f9ff;
+
+  .table-responsive {
+    overflow-x: auto;
   }
-  
-  .table-row-editable.stock-bajo {
-    background-color: #fef3c7;
+
+  .edit-mode input, .edit-mode select {
+    background: #fef3c7;
+    border: 2px solid #f59e0b;
   }
-  
-  .table-row-editable.stock-critico {
-    background-color: #fee2e2;
-  }
-  
-  .input-field {
-    transition: all 0.2s;
-  }
-  
-  .input-field:focus {
+
+  .edit-mode input:focus, .edit-mode select:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    border-color: #d97706;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-stock-bajo {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+
+  .badge-stock-ok {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .badge-sin-costo {
+    background: #fef3c7;
+    color: #92400e;
   }
 </style>
 
 </head>
 
-<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen flex flex-col">
+<body class="bg-gray-50 min-h-screen flex flex-col">
 
 <!-- HEADER -->
-<header class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 shadow-lg">
-  <div class="max-w-6xl mx-auto flex justify-between items-center">
-    <div>
-      <h1 class="font-bold text-2xl flex items-center gap-2">
-        <i class="bi bi-box2-heart"></i>
-        Inventario
-      </h1>
-      <p class="text-blue-100 text-sm mt-1" id="totalProductos">Cargando...</p>
+<header class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 shadow-lg sticky top-0 z-20">
+  <div class="flex justify-between items-center">
+    <div class="font-bold text-lg flex items-center gap-2">
+      <i class="bi bi-box2"></i> Inventario
     </div>
-
-    <div class="flex gap-3">
-      <button id="btnExportarExcel"
-        class="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-50 transition flex items-center gap-2 shadow">
-        <i class="bi bi-file-earmark-excel"></i>
-        Exportar
-      </button>
-
-      <a href="index5.html"
-        class="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-50 transition flex items-center gap-2 shadow">
-        <i class="bi bi-arrow-left"></i>
-        Volver
-      </a>
-    </div>
+    <a href="index.html" class="bg-white text-blue-600 px-4 py-2 rounded font-bold hover:shadow-lg transition">
+      ← Volver
+    </a>
   </div>
 </header>
 
-<!-- CONTENIDO -->
-<div class="p-6 flex flex-col gap-6 flex-1 max-w-6xl mx-auto w-full">
-
-  <!-- FORM AGREGAR PRODUCTO -->
-  <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-    <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
-      <i class="bi bi-plus-circle text-blue-600"></i>
-      Agregar Producto
-    </h2>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
-
-      <input id="invNombre"
-        class="input-field border border-gray-300 p-3 rounded-lg"
-        placeholder="Producto" autofocus>
-
-      <input id="invCantidad"
-        type="number"
-        class="input-field border border-gray-300 p-3 rounded-lg"
-        placeholder="Cantidad"
-        min="0">
-
-      <input id="invCosto"
-        type="number"
-        step="0.01"
-        class="input-field border border-gray-300 p-3 rounded-lg"
-        placeholder="Costo"
-        min="0">
-
-      <input id="invPrecio"
-        type="number"
-        step="0.01"
-        class="input-field border border-gray-300 p-3 rounded-lg"
-        placeholder="Precio"
-        min="0">
-
-      <select id="invUnidad" class="input-field border border-gray-300 p-3 rounded-lg">
-        <option value="pieza">Pieza</option>
-        <option value="kg">Kg</option>
-        <option value="g">Gramo</option>
-        <option value="l">Litro</option>
-      </select>
-
-    </div>
-
-    <button id="btnGuardar"
-      class="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg font-bold hover:from-blue-700 hover:to-blue-800 transition flex items-center justify-center gap-2">
-      <i class="bi bi-plus-lg"></i>
-      Guardar Producto
+<!-- BÚSQUEDA Y FILTROS -->
+<div class="bg-white shadow p-4 border-b border-gray-200">
+  <div class="flex gap-2 flex-wrap mb-3">
+    <input id="searchInventario" 
+      type="text" 
+      placeholder="🔍 Buscar producto..." 
+      class="flex-1 min-w-60 border-2 p-2 rounded font-bold">
+    
+    <button id="btnNuevoProducto" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-bold transition flex items-center gap-1">
+      <i class="bi bi-plus-circle"></i> Nuevo
     </button>
-
   </div>
 
-  <!-- FILTROS Y ESTADÍSTICAS -->
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-blue-500">
-      <p class="text-gray-600 text-sm">Total Productos</p>
-      <p class="text-2xl font-bold text-blue-600" id="statTotal">0</p>
-    </div>
-    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-yellow-500">
-      <p class="text-gray-600 text-sm">Stock Bajo</p>
-      <p class="text-2xl font-bold text-yellow-600" id="statBajo">0</p>
-    </div>
-    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-red-500">
-      <p class="text-gray-600 text-sm">Sin Stock</p>
-      <p class="text-2xl font-bold text-red-600" id="statCritico">0</p>
-    </div>
-    <div class="bg-white p-4 rounded-xl shadow border-l-4 border-green-500">
-      <p class="text-gray-600 text-sm">Valor Total</p>
-      <p class="text-2xl font-bold text-green-600" id="statValor">$0</p>
-    </div>
+  <div class="flex gap-2 flex-wrap text-sm">
+    <button id="filterTodos" class="px-3 py-1 bg-blue-100 text-blue-700 rounded font-bold">
+      Todos (0)
+    </button>
+    <button id="filterBajoStock" class="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition">
+      Bajo Stock
+    </button>
+    <button id="filterSinCosto" class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition">
+      Sin Costo
+    </button>
   </div>
-
-  <!-- BUSCADOR -->
-  <div class="bg-white p-4 rounded-xl shadow">
-    <input id="buscador"
-      type="text"
-      placeholder="🔍 Busca por nombre..."
-      class="input-field w-full border border-gray-300 p-3 rounded-lg">
-  </div>
-
-  <!-- TABLA -->
-  <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
-
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-
-        <thead class="bg-gradient-to-r from-gray-100 to-gray-50 border-b-2 border-gray-300 sticky top-0">
-          <tr>
-            <th class="p-3 text-left font-bold text-gray-700">Producto</th>
-            <th class="p-3 text-center font-bold text-gray-700">Stock</th>
-            <th class="p-3 text-center font-bold text-gray-700">Unidad</th>
-            <th class="p-3 text-right font-bold text-gray-700">Costo</th>
-            <th class="p-3 text-right font-bold text-gray-700">Precio</th>
-            <th class="p-3 text-right font-bold text-gray-700">Margen</th>
-            <th class="p-3 text-center font-bold text-gray-700">Acciones</th>
-          </tr>
-        </thead>
-
-        <tbody id="listaInventario" class="divide-y divide-gray-200">
-          <!-- Se llena dinámicamente -->
-        </tbody>
-
-      </table>
-    </div>
-
-  </div>
-
 </div>
 
-<script>
+<!-- TABLA -->
+<div class="p-4 flex-1">
+  <div class="table-responsive bg-white rounded-lg shadow overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-100 border-b-2 border-gray-300">
+        <tr>
+          <th class="px-4 py-3 text-left font-bold">Producto</th>
+          <th class="px-4 py-3 text-center font-bold">Stock</th>
+          <th class="px-4 py-3 text-right font-bold">Costo</th>
+          <th class="px-4 py-3 text-right font-bold">Precio Venta</th>
+          <th class="px-4 py-3 text-center font-bold">Ganancia/U</th>
+          <th class="px-4 py-3 text-center font-bold">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tablaInventario">
+        <tr>
+          <td colspan="6" class="text-center p-4 text-gray-400">
+            Cargando...
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
-// =======================
-// 📦 DATA
-// =======================
-let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
-const lista = document.getElementById("listaInventario");
+  <!-- STATS -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+    <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+      <p class="text-xs text-gray-600">Total Productos</p>
+      <p id="statTotal" class="text-2xl font-bold">0</p>
+    </div>
+    <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500">
+      <p class="text-xs text-gray-600">Bajo Stock</p>
+      <p id="statBajo" class="text-2xl font-bold text-red-600">0</p>
+    </div>
+    <div class="bg-purple-50 p-3 rounded border-l-4 border-purple-500">
+      <p class="text-xs text-gray-600">Sin Costo</p>
+      <p id="statSinCosto" class="text-2xl font-bold text-yellow-600">0</p>
+    </div>
+    <div class="bg-green-50 p-3 rounded border-l-4 border-green-500">
+      <p class="text-xs text-gray-600">Valor Total Stock</p>
+      <p id="statValor" class="text-2xl font-bold text-green-600">$0</p>
+    </div>
+  </div>
+</div>
 
-// =======================
-// 📊 ACTUALIZAR ESTADÍSTICAS
-// =======================
-function actualizarEstadisticas() {
-  const total = inventario.length;
-  const bajo = inventario.filter(p => p.cantidad > 0 && p.cantidad < 5).length;
-  const critico = inventario.filter(p => p.cantidad <= 0).length;
-  const valor = inventario.reduce((sum, p) => sum + ((p.cantidad || 0) * (p.precio || 0)), 0);
+<!-- MODAL EDITAR -->
+<dialog id="modalEditar" class="p-6 rounded-lg w-full max-w-md">
+  <h2 class="font-bold text-xl mb-4 flex items-center gap-2">
+    <i class="bi bi-pencil-square"></i> Editar Producto
+  </h2>
 
-  document.getElementById("statTotal").textContent = total;
-  document.getElementById("statBajo").textContent = bajo;
-  document.getElementById("statCritico").textContent = critico;
-  document.getElementById("statValor").textContent = `$${valor.toFixed(2)}`;
-  document.getElementById("totalProductos").textContent = `${total} productos en el sistema`;
-}
+  <div class="space-y-3 mb-4">
+    <div>
+      <label class="block text-sm font-bold mb-1">Nombre</label>
+      <input id="editNombre" type="text" class="border-2 p-2 w-full rounded">
+    </div>
 
-// =======================
-// ➕ GUARDAR PRODUCTO
-// =======================
-document.getElementById("btnGuardar").onclick = () => {
+    <div>
+      <label class="block text-sm font-bold mb-1">Stock (Entero)</label>
+      <input id="editStock" type="number" step="1" class="border-2 p-2 w-full rounded">
+    </div>
 
-  const nombre = document.getElementById("invNombre").value.toLowerCase().trim();
-  const cantidad = Number(document.getElementById("invCantidad").value) || 0;
-  const costo = Number(document.getElementById("invCosto").value) || null;
-  const precio = Number(document.getElementById("invPrecio").value) || 0;
-  const unidad = document.getElementById("invUnidad").value;
-
-  if (!nombre) {
-    alert("⚠️ Escribe un nombre de producto");
-    return;
-  }
-
-  const existente = inventario.find(p =>
-    p.nombre.trim().toLowerCase() === nombre
-  );
-
-  if (existente) {
-    existente.cantidad += cantidad;
-    if (costo) existente.costo = costo;
-    if (precio) existente.precioVenta = precio;
-    if (unidad) existente.unidad = unidad;
-    
-    alert(`✅ Stock actualizado: ${nombre}`);
-  } else {
-    inventario.push({
-      id: Date.now(),
-      nombre,
-      stock: cantidad,
-      cantidad,
-      costo: costo || null,
-      precioVenta: precio,
-      precio: precio,
-      unidad: unidad || "pieza",
-      alias: []
-    });
-    
-    alert(`✨ Producto agregado: ${nombre}`);
-  }
-
-  guardar();
-  limpiar();
-  render();
-  actualizarEstadisticas();
-};
-
-// =======================
-// 💾 GUARDAR
-// =======================
-function guardar() {
-  localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
-}
-
-// =======================
-// 🧹 LIMPIAR
-// =======================
-function limpiar() {
-  document.getElementById("invNombre").value = "";
-  document.getElementById("invCantidad").value = "";
-  document.getElementById("invCosto").value = "";
-  document.getElementById("invPrecio").value = "";
-  document.getElementById("invUnidad").value = "pieza";
-  document.getElementById("invNombre").focus();
-}
-
-// =======================
-// 🔍 BUSCADOR
-// =======================
-document.getElementById("buscador").addEventListener("input", (e) => {
-  const termino = e.target.value.toLowerCase();
-  const filas = document.querySelectorAll("tbody tr");
-  
-  filas.forEach(fila => {
-    const nombre = fila.querySelector("td:first-child").textContent.toLowerCase();
-    fila.style.display = nombre.includes(termino) ? "" : "none";
-  });
-});
-
-// =======================
-// 🧾 RENDER
-// =======================
-function render() {
-
-  lista.innerHTML = "";
-
-  inventario.forEach((p, i) => {
-
-    const tr = document.createElement("tr");
-
-    let colorClase = "table-row-editable";
-    if (p.cantidad <= 0) colorClase += " stock-critico";
-    else if (p.cantidad < 5) colorClase += " stock-bajo";
-
-    tr.className = colorClase;
-
-    const margen = (p.precio && p.costo) ? ((p.precio - p.costo) / p.costo * 100).toFixed(1) : "N/A";
-    const margenColor = margen !== "N/A" && margen >= 30 ? "text-green-600" : margen !== "N/A" && margen >= 10 ? "text-yellow-600" : "text-red-600";
-
-    tr.innerHTML = `
-      <td class="p-3">
-        <input value="${p.nombre}" class="input-field w-full border border-gray-200 p-1 rounded" readonly style="font-weight: bold;">
-      </td>
-      <td class="p-3 text-center">
-        <input type="number" value="${p.cantidad || 0}" class="input-field w-20 border border-gray-200 p-1 rounded text-center" min="0">
-      </td>
-      <td class="p-3 text-center">
-        <select class="input-field border border-gray-200 p-1 rounded text-center">
-          <option value="pieza" ${p.unidad === "pieza" ? "selected" : ""}>Pieza</option>
-          <option value="kg" ${p.unidad === "kg" ? "selected" : ""}>Kg</option>
-          <option value="g" ${p.unidad === "g" ? "selected" : ""}>G</option>
-          <option value="l" ${p.unidad === "l" ? "selected" : ""}>L</option>
-        </select>
-      </td>
-      <td class="p-3 text-right">
-        <input type="number" step="0.01" value="${p.costo || 0}" class="input-field w-24 border border-gray-200 p-1 rounded text-right" min="0">
-      </td>
-      <td class="p-3 text-right">
-        <input type="number" step="0.01" value="${p.price || p.precioVenta || p.precio || 0}" class="input-field w-24 border border-gray-200 p-1 rounded text-right font-bold text-blue-600" min="0">
-      </td>
-      <td class="p-3 text-right ${margenColor} font-bold">
-        ${margen}%
-      </td>
-      <td class="p-3 text-center">
-        <button class="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded transition">
-          <i class="bi bi-trash"></i>
+    <div>
+      <label class="block text-sm font-bold mb-1">Costo (sin decimales)</label>
+      <div class="flex gap-2">
+        <input id="editCosto" type="number" step="1" placeholder="Ej: 100" class="border-2 p-2 flex-1 rounded">
+        <button id="btnCalcularCosto" class="bg-blue-500 text-white px-3 rounded hover:bg-blue-600 transition">
+          📊 Auto
         </button>
-      </td>
-    `;
+      </div>
+    </div>
 
-    const inputs = tr.querySelectorAll("input");
+    <div>
+      <label class="block text-sm font-bold mb-1">Precio Venta (sin decimales)</label>
+      <input id="editPrecio" type="number" step="1" placeholder="Ej: 150" class="border-2 p-2 w-full rounded">
+    </div>
 
-    // cantidad
-    inputs[1].onchange = e => {
-      p.cantidad = Number(e.target.value) || 0;
-      p.stock = p.cantidad;
-      guardar();
-      render();
-      actualizarEstadisticas();
-    };
+    <div class="bg-blue-50 p-2 rounded text-sm">
+      <p class="text-gray-600">Ganancia por unidad: <span id="editGanancia" class="font-bold text-green-600">$0</span></p>
+      <p class="text-gray-600">Margen: <span id="editMargen" class="font-bold">0%</span></p>
+    </div>
+  </div>
 
-    // costo
-    inputs[2].onchange = e => {
-      p.costo = Number(e.target.value) || null;
-      guardar();
-      render();
-      actualizarEstadisticas();
-    };
+  <div class="flex gap-2">
+    <button id="btnGuardarEdicion" class="bg-green-600 hover:bg-green-700 text-white flex-1 py-2 rounded font-bold transition">
+      💾 Guardar
+    </button>
+    <button id="btnCancelarEdicion" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded font-bold transition">
+      Cancelar
+    </button>
+    <button id="btnEliminarProducto" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-bold transition">
+      🗑️ Eliminar
+    </button>
+  </div>
+</dialog>
 
-    // precio
-    inputs[3].onchange = e => {
-      const valor = Number(e.target.value) || 0;
-      p.precio = valor;
-      p.precioVenta = valor;
-      guardar();
-      render();
-      actualizarEstadisticas();
-    };
+<!-- MODAL NUEVO -->
+<dialog id="modalNuevo" class="p-6 rounded-lg w-full max-w-md">
+  <h2 class="font-bold text-xl mb-4 flex items-center gap-2">
+    <i class="bi bi-plus-circle"></i> Nuevo Producto
+  </h2>
 
-    // unidad
-    tr.querySelector("select").onchange = e => {
-      p.unidad = e.target.value;
-      guardar();
-    };
+  <div class="space-y-3 mb-4">
+    <div>
+      <label class="block text-sm font-bold mb-1">Nombre *</label>
+      <input id="nuevoNombre" type="text" class="border-2 p-2 w-full rounded" placeholder="Ej: Huevo">
+    </div>
 
-    // eliminar
-    tr.querySelector("button").onclick = () => {
-      if (!confirm(`¿Eliminar ${p.nombre}?`)) return;
-      inventario.splice(i, 1);
-      guardar();
-      render();
-      actualizarEstadisticas();
-    };
+    <div>
+      <label class="block text-sm font-bold mb-1">Stock (Entero)</label>
+      <input id="nuevoStock" type="number" step="1" value="0" class="border-2 p-2 w-full rounded">
+    </div>
 
-    lista.appendChild(tr);
-  });
+    <div>
+      <label class="block text-sm font-bold mb-1">Costo c/u (opcional)</label>
+      <input id="nuevoCosto" type="number" step="1" placeholder="Ej: 100" class="border-2 p-2 w-full rounded">
+    </div>
 
-  actualizarEstadisticas();
-}
+    <div>
+      <label class="block text-sm font-bold mb-1">Precio Venta c/u *</label>
+      <input id="nuevoPrecio" type="number" step="1" placeholder="Ej: 150" class="border-2 p-2 w-full rounded">
+    </div>
 
-render();
+    <div>
+      <label class="block text-sm font-bold mb-1">Unidad</label>
+      <select id="nuevaUnidad" class="border-2 p-2 w-full rounded">
+        <option value="pieza">Pieza</option>
+        <option value="kg">Kilogramo</option>
+        <option value="g">Gramo</option>
+        <option value="l">Litro</option>
+        <option value="metro">Metro</option>
+      </select>
+    </div>
+  </div>
 
-// =======================
-// 📊 EXPORTAR EXCEL
-// =======================
-document.getElementById("btnExportarExcel").onclick = () => {
+  <div class="flex gap-2">
+    <button id="btnGuardarNuevo" class="bg-green-600 hover:bg-green-700 text-white flex-1 py-2 rounded font-bold transition">
+      ➕ Crear
+    </button>
+    <button id="btnCancelarNuevo" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded font-bold transition">
+      Cancelar
+    </button>
+  </div>
+</dialog>
 
-  const dataExcel = inventario.map(p => ({
-    Producto: p.nombre,
-    Cantidad: p.cantidad,
-    Unidad: p.unidad,
-    Costo: p.costo,
-    Precio: p.precioVenta || p.precio,
-    Margen: p.precio && p.costo ? ((p.precio - p.costo) / p.costo * 100).toFixed(1) + "%" : "N/A",
-    Alias: (p.alias || []).join(", ")
-  }));
-
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(dataExcel);
-
-  XLSX.utils.book_append_sheet(wb, ws, "Inventario");
-
-  XLSX.writeFile(wb, `inventario-${new Date().toISOString().split('T')[0]}.xlsx`);
-};
-
-// =======================
-// 🔄 SINCRONIZACIÓN EN TIEMPO REAL
-// =======================
-window.addEventListener("storage", (event) => {
-  if (event.key === "inventarioPOS") {
-    console.log("📡 Inventario sincronizado desde venta rápida");
-    inventario = JSON.parse(event.newValue) || [];
-    render();
-    actualizarEstadisticas();
-  }
-});
-
-</script>
+<script src="inventario.js"></script>
 
 </body>
 </html>
