@@ -12,6 +12,7 @@ let usuarioActual = null;
 let carrito = [];
 let totalVenta = 0;
 let ultimoTotalVenta = 0;
+let ultimaVenta = null;
 let datosVentas = {};
 let inventarioLocal = [];
 
@@ -428,6 +429,8 @@ document.getElementById("btnFinalizarVenta").onclick = () => {
     usuario: usuarioActual
   };
   
+  ultimaVenta = venta;
+  
   if (!datosVentas[usuarioActual]) {
     datosVentas[usuarioActual] = [];
   }
@@ -544,11 +547,11 @@ function renderHistorial() {
       </div>
       
       <div class="flex gap-2 flex-wrap">
+        <button onclick="abrirCompartir(${v.id})" class="flex-1 min-w-20 bg-purple-600 hover:bg-purple-700 text-white px-2 sm:px-3 py-2 rounded font-bold text-xs sm:text-sm transition">
+          📤 Compartir
+        </button>
         <button onclick="descargarTicket(${v.id})" class="flex-1 min-w-20 bg-blue-600 hover:bg-blue-700 text-white px-2 sm:px-3 py-2 rounded font-bold text-xs sm:text-sm transition">
           📄 Ticket
-        </button>
-        <button onclick="compartirWhatsApp(${v.id})" class="flex-1 min-w-20 bg-green-600 hover:bg-green-700 text-white px-2 sm:px-3 py-2 rounded font-bold text-xs sm:text-sm transition">
-          📱 WhatsApp
         </button>
         <button onclick="eliminarVenta('${usuarioActual}', ${v.id})" class="flex-1 min-w-20 bg-red-600 hover:bg-red-700 text-white px-2 sm:px-3 py-2 rounded font-bold text-xs sm:text-sm transition">
           🗑️ Eliminar
@@ -565,6 +568,100 @@ function eliminarVenta(usuario, ventaId) {
   guardarDatos();
   renderHistorial();
   actualizarEstadisticas();
+}
+
+// ========================================
+// 📤 COMPARTIR - NUEVO
+// ========================================
+
+function abrirCompartir(ventaId) {
+  const venta = datosVentas[usuarioActual].find(v => v.id === ventaId);
+  if (!venta) return;
+
+  // Generar comprobante
+  let comprobanteHTML = `
+    <div class="text-center text-xs">
+      <p class="font-bold">🧾 COMPROBANTE DE VENTA</p>
+      <p class="text-gray-600">Usuario: ${venta.usuario}</p>
+      <p class="text-gray-600">${venta.fecha}</p>
+      <hr class="my-1">
+  `;
+
+  venta.items.forEach(item => {
+    comprobanteHTML += `
+      <div class="flex justify-between">
+        <span>${item.nombre}</span>
+        <span>$${item.subtotal.toFixed(2)}</span>
+      </div>
+    `;
+  });
+
+  comprobanteHTML += `
+      <hr class="my-1">
+      <p class="font-bold text-green-600">TOTAL: $${venta.total.toFixed(2)}</p>
+    </div>
+  `;
+
+  document.getElementById("comprobante").innerHTML = comprobanteHTML;
+
+  // Generar QR
+  const qrContainer = document.getElementById("qrCode");
+  qrContainer.innerHTML = ""; // Limpiar QR anterior
+  
+  const qrData = `Comprobante: ${venta.id}\nUsuario: ${venta.usuario}\nTotal: $${venta.total}\nFecha: ${venta.fecha}`;
+  
+  new QRCode(qrContainer, {
+    text: qrData,
+    width: 200,
+    height: 200,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  // Guardar referencia para compartir
+  ultimaVenta = venta;
+  
+  document.getElementById("modalCompartir").showModal();
+}
+
+function compartirWhatsAppConVenta() {
+  if (!ultimaVenta) return;
+
+  const venta = ultimaVenta;
+  
+  let mensaje = `🧾 *COMPROBANTE DE VENTA*\n\n`;
+  mensaje += `👤 Usuario: ${venta.usuario}\n`;
+  mensaje += `📅 Fecha: ${venta.fecha}\n\n`;
+  mensaje += `*Detalles de la compra:*\n`;
+  mensaje += `━━━━━━━━━━━━━━━━━━\n`;
+  
+  venta.items.forEach(item => {
+    mensaje += `${item.nombre}\n`;
+    mensaje += `${item.cantidad} × $${item.precio.toFixed(2)} = $${item.subtotal.toFixed(2)}\n\n`;
+  });
+  
+  mensaje += `━━━━━━━━━━━━━━━━━━\n`;
+  mensaje += `💰 *TOTAL: $${venta.total.toFixed(2)}*\n\n`;
+  mensaje += `Gracias por su compra! 😊`;
+  
+  const mensajeCodificado = encodeURIComponent(mensaje);
+  const whatsappUrl = `https://wa.me/?text=${mensajeCodificado}`;
+  
+  window.open(whatsappUrl, "_blank");
+}
+
+function descargarQR() {
+  const qrCanvas = document.querySelector("#qrCode canvas");
+  if (!qrCanvas) {
+    alert("⚠️ QR no generado");
+    return;
+  }
+
+  const link = document.createElement("a");
+  link.href = qrCanvas.toDataURL();
+  link.download = `comprobante-${ultimaVenta.id}.png`;
+  link.click();
 }
 
 function descargarTicket(ventaId) {
@@ -592,35 +689,6 @@ function descargarTicket(ventaId) {
   win.document.write(html);
   win.document.close();
   win.print();
-}
-
-function compartirWhatsApp(ventaId) {
-  const venta = datosVentas[usuarioActual].find(v => v.id === ventaId);
-  if (!venta) return;
-  
-  // Crear mensaje con formato legible
-  let mensaje = `🧾 *COMPROBANTE DE VENTA*\n\n`;
-  mensaje += `👤 Usuario: ${venta.usuario}\n`;
-  mensaje += `📅 Fecha: ${venta.fecha}\n\n`;
-  mensaje += `*Detalles de la compra:*\n`;
-  mensaje += `━━━━━━━━━━━━━━━━━━\n`;
-  
-  venta.items.forEach(item => {
-    mensaje += `${item.nombre}\n`;
-    mensaje += `${item.cantidad} × $${item.precio.toFixed(2)} = $${item.subtotal.toFixed(2)}\n\n`;
-  });
-  
-  mensaje += `━━━━━━━━━━━━━━━━━━\n`;
-  mensaje += `💰 *TOTAL: $${venta.total.toFixed(2)}*\n\n`;
-  mensaje += `Gracias por su compra! 😊`;
-  
-  // Codificar el mensaje
-  const mensajeCodificado = encodeURIComponent(mensaje);
-  
-  // Link a WhatsApp (sin número, abre el chat de inicio)
-  const whatsappUrl = `https://wa.me/?text=${mensajeCodificado}`;
-  
-  window.open(whatsappUrl, "_blank");
 }
 
 // ========================================
