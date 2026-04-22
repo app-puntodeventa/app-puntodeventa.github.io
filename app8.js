@@ -374,346 +374,141 @@ function actualizarPreviewLibre() {
 // 🧠 PARSER ULTRA INTELIGENTE (IA)
 // ======================================
 // ======================================
-// 🧠 PARSER IA - LENGUAJE NATURAL TIENDAS MX
+// 🧠 PARSER ULTRA INTELIGENTE (IA TIENDAS MX)
 // ======================================
 
-/**
- * Parser inteligente para órdenes de compra en español mexicano
- * Convierte texto informal en JSON estructurado
- * 
- * Ejemplo: "20 de jamón, 2 cocas y 1 kilo de tortilla"
- * Salida: [
- *   { tipo: "monto", producto: "jamón", valor: 20, moneda: "MXN" },
- *   { tipo: "pieza", producto: "coca", cantidad: 2 },
- *   { tipo: "cantidad", producto: "tortilla", valor: 1, unidad: "kilo" }
- * ]
- */
+function parseIA(texto) {
+  if (!texto.trim()) return null;
 
-// ======================================
-// 📚 DICCIONARIO DE NORMALIZACION
-// ======================================
+  const resultado = parseOrder(texto);
 
-const DICCIONARIO_PRODUCTOS = {
-  // Bebidas
-  "coca": ["coka", "cocas", "coca cola", "cokas"],
-  "pepsi": ["pepsí", "pepsis"],
-  "sprite": ["sprites"],
-  "refresco": ["refrescos"],
-  "cerveza": ["cervezas"],
-  "pulque": ["pulques"],
-  "pulquería": ["pulquerías"],
-  "jugo": ["jugos", "zumo", "zumos"],
-  "leche": ["leches"],
-  "agua": ["aguas"],
-  
-  // Carnes y proteínas
-  "jamón": ["jamon", "jamones"],
-  "tocino": ["tocinos"],
-  "carne": ["carnes"],
-  "pollo": ["pollos"],
-  "pescado": ["pescados"],
-  "huevo": ["huevos"],
-  "queso": ["quesos"],
-  "yogurt": ["yogur", "yogurts", "yogures"],
-  
-  // Productos de panadería
-  "pan": ["panes"],
-  "bolillo": ["bolillos"],
-  "telera": ["teleras"],
-  "tortilla": ["tortillas"],
-  "concha": ["conchas"],
-  "dona": ["donas", "dónut", "donuts"],
-  "pastel": ["pasteles"],
-  "pastelillo": ["pastelillos"],
-  
-  // Frutas y verduras
-  "manzana": ["manzanas"],
-  "platano": ["plátano", "platanos", "plátanos", "bananas"],
-  "naranja": ["naranjas"],
-  "limon": ["limón", "limones"],
-  "tomate": ["tomates"],
-  "cebolla": ["cebollas"],
-  "ajo": ["ajos"],
-  "chile": ["chiles"],
-  "papa": ["papas", "patata", "patatas"],
-  "zanahoria": ["zanahorias"],
-  
-  // Artículos de papelería
-  "pluma": ["plumas", "bolígrafo", "bolígrafos"],
-  "lapiz": ["lápiz", "lapices", "lápices"],
-  "cuaderno": ["cuadernos"],
-  "libreta": ["libretas"],
-  "papel": ["papeles"],
-  "hoja": ["hojas"],
-  "goma": ["gomas", "borrador", "borradores"],
-  "regla": ["reglas"],
-  "pegamento": ["pegamentos"],
-  "marcador": ["marcadores"],
-  "rotulador": ["rotuladores"],
-  "colores": ["color", "lápices de color"],
-  "crayon": ["crayones", "crayola", "crayolas"],
-  
-  // Artículos de oficina
-  "tinta": ["tintas"],
-  "tóner": ["tóners"],
-  "cartuchos": ["cartucho"],
-  "folder": ["folders"],
-  "carpeta": ["carpetas"],
-  "paquete": ["paquetes"],
-  
-  // Otros
-  "chicle": ["chicles"],
-  "chocolate": ["chocolates"],
-  "caramelo": ["caramelos"],
-  "galleta": ["galletas"],
-  "cereal": ["cereales"],
-  "arroz": ["arroces"],
-  "frijol": ["frijoles"],
-  "aceite": ["aceites"],
-  "azucar": ["azúcar", "azucares", "azúcares"],
-  "sal": ["sales"],
-  "jabón": ["jabones"],
-  "detergente": ["detergentes"],
-  "papel higienico": ["papel higiénico", "papel higienico"],
-  "servilleta": ["servilletas"],
-  "bolsa": ["bolsas", "bolsita", "bolsitas"],
-  "vaso": ["vasos"],
-  "plato": ["platos"],
-  "cuchara": ["cucharas"],
-  "tenedor": ["tenedores"],
-  "cuchillo": ["cuchillos"],
-};
+  if (!resultado.success) {
+    return { esValido: false, error: resultado.error };
+  }
 
-const DICCIONARIO_UNIDADES = {
-  // Peso
-  "kilo": ["kg", "kilogramo", "kilos", "kilogramos"],
-  "gramo": ["g", "gr", "grs", "gramos"],
-  "medio kilo": ["1/2 kg", "medio", "½ kg"],
-  "cuarto kilo": ["1/4 kg", "¼ kg"],
-  
-  // Volumen
-  "litro": ["l", "lt", "lts", "litros"],
-  "mililitro": ["ml", "mls", "mililitros"],
-  "medio litro": ["1/2 litro", "½ lt"],
-  
-  // Conteo
-  "pieza": ["pz", "piezas", "unidad", "unidades"],
-  "docena": ["docenas", "dz"],
-  "par": ["pares"],
-};
+  if (resultado.data.length === 0) {
+    return { esValido: false, error: "No reconozco productos en ese texto" };
+  }
 
-const DICCIONARIO_CONECTORES = ["de", "y", ",", "con", "más"];
+  // Convertir el resultado a formato de venta
+  const ventas = formatearParaVenta(resultado.data);
 
-// ======================================
-// 🧹 FUNCIONES DE NORMALIZACIÓN
-// ======================================
-
-/**
- * Normaliza el texto: lowercase, sin acentos, espacios limpios
- */
-function normalizarTexto(texto) {
-  return texto
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Elimina acentos
-    .replace(/\s+/g, " ") // Espacios múltiples a uno
-    .trim();
+  return {
+    esValido: true,
+    productos: ventas,
+    preview: resultado.preview
+  };
 }
 
-/**
- * Busca un producto en el diccionario
- * Devuelve el nombre normalizado
- */
-function normalizarProducto(nombre) {
-  const nombreNorm = normalizarTexto(nombre);
-  
-  // Búsqueda directa
-  if (DICCIONARIO_PRODUCTOS[nombreNorm]) {
-    return nombreNorm;
-  }
-  
-  // Búsqueda en sinónimos
-  for (const [producto, sinonimos] of Object.entries(DICCIONARIO_PRODUCTOS)) {
-    if (sinonimos.includes(nombreNorm)) {
-      return producto;
+// ======================================
+// 👀 PREVIEW BETA MEJORADO
+// ======================================
+
+if (inputBeta) {
+  inputBeta.addEventListener("input", () => {
+    const resultado = parseIA(inputBeta.value);
+
+    if (!resultado.esValido) {
+      if (inputBeta.value.trim()) {
+        previewBeta.classList.remove("hidden");
+        previewBeta.innerHTML = `<span class="text-red-500">❌ ${resultado.error}</span>`;
+      } else {
+        previewBeta.classList.add("hidden");
+      }
+      return;
     }
-  }
-  
-  // Si no encuentra, devuelve el nombre limpio
-  return nombreNorm;
-}
 
-/**
- * Busca una unidad en el diccionario
- * Devuelve la unidad normalizada
- */
-function normalizarUnidad(unidad) {
-  if (!unidad) return null;
-  
-  const unidadNorm = normalizarTexto(unidad);
-  
-  for (const [unitoPrincipal, variantes] of Object.entries(DICCIONARIO_UNIDADES)) {
-    if (variantes.includes(unidadNorm)) {
-      return unitoPrincipal;
-    }
-  }
-  
-  return unidadNorm;
-}
+    previewBeta.classList.remove("hidden");
 
-// ======================================
-// 🔍 DETECTORES DE PATRONES
-// ======================================
+    let total = 0;
+    let html = '<div class="space-y-2">';
 
-/**
- * Detecta patrón: "[numero] de [producto]"
- * Interpreta como MONTO en MXN
- * Ej: "20 de jamón" → { tipo: "monto", producto: "jamón", valor: 20 }
- */
-function detectarMonto(texto) {
-  const regex = /(\d+(?:\.\d+)?)\s+de\s+(.+?)(?:,|y|$)/gi;
-  const resultados = [];
-  let match;
+    resultado.productos.forEach((p, idx) => {
+      const precioEstimado = p.precioPorUnidad || p.precioTotal || 0;
+      const precioFinal = p.precioTotal || (p.cantidad * precioEstimado);
+      total += precioFinal;
 
-  while ((match = regex.exec(texto)) !== null) {
-    const valor = parseFloat(match[1]);
-    const productoRaw = match[2].trim();
-    const producto = normalizarProducto(productoRaw);
-
-    resultados.push({
-      tipo: "monto",
-      producto,
-      valor,
-      moneda: "MXN",
-      original: match[0]
+      html += `
+        <div class="border-b pb-2 last:border-b-0">
+          <div class="flex justify-between text-sm">
+            <span class="font-bold">📦 ${p.descripcion}</span>
+            <span class="text-green-600 font-bold">$${precioFinal.toFixed(2)}</span>
+          </div>
+        </div>
+      `;
     });
-  }
 
-  return resultados;
+    html += `
+      <div class="border-t pt-2 mt-2 font-bold flex justify-between">
+        <span>Total ${resultado.productos.length} items:</span>
+        <span class="text-green-600 text-lg">$${total.toFixed(2)}</span>
+      </div>
+    </div>`;
+
+    previewBeta.innerHTML = html;
+  });
 }
 
-/**
- * Detecta patrón: "[numero] [unidad] de [producto]"
- * Interpreta como CANTIDAD física
- * Ej: "2 kilos de huevo" → { tipo: "cantidad", producto: "huevo", valor: 2, unidad: "kilo" }
- */
-function detectarCantidad(texto) {
-  const regex = /(\d+(?:\.\d+)?)\s+(kilo|kg|kilogramo|gramo|g|litro|l|lt|mililitro|ml|pieza|pz|docena|dz|par|medio|¼|½|1\/2|1\/4)\s+de\s+(.+?)(?:,|y|$)/gi;
-  const resultados = [];
-  let match;
+// ======================================
+// ➕ AGREGAR - BETA (IA) MEJORADO
+// ======================================
 
-  while ((match = regex.exec(texto)) !== null) {
-    const valor = parseFloat(match[1]);
-    const unidadRaw = match[2];
-    const productoRaw = match[3].trim();
-    
-    const unidad = normalizarUnidad(unidadRaw);
-    const producto = normalizarProducto(productoRaw);
-
-    resultados.push({
-      tipo: "cantidad",
-      producto,
-      valor,
-      unidad,
-      original: match[0]
-    });
-  }
-
-  return resultados;
-}
-
-/**
- * Detecta patrón: "[numero] [producto]" (SIN "de")
- * Interpreta como PIEZAS
- * Ej: "3 plumas" → { tipo: "pieza", producto: "pluma", cantidad: 3 }
- */
-function detectarPiezas(texto) {
-  const regex = /(\d+)\s+([a-záéíóúñ\s]+?)(?:,|y|$)/gi;
-  const resultados = [];
-  let match;
-
-  while ((match = regex.exec(texto)) !== null) {
-    const cantidad = parseInt(match[1]);
-    const productoRaw = match[2].trim();
-
-    // Evitar capturar si ya fue detectado en otros patrones
-    if (productoRaw.includes("de") || productoRaw.match(/kilo|kg|litro|ml|gramo|pieza|pz|docena/i)) {
-      continue;
+if (btnAgregarBeta) {
+  btnAgregarBeta.onclick = () => {
+    if (!checkDemoLimit()) {
+      document.getElementById("licenseModal").classList.add("active");
+      return;
     }
 
-    const producto = normalizarProducto(productoRaw);
+    const resultado = parseIA(inputBeta.value);
 
-    // Solo agregar si es un producto conocido
-    if (DICCIONARIO_PRODUCTOS[producto] || Object.values(DICCIONARIO_PRODUCTOS).flat().includes(producto)) {
-      resultados.push({
-        tipo: "pieza",
-        producto,
-        cantidad,
-        original: match[0]
+    if (!resultado.esValido) {
+      alert(`❌ ${resultado.error}\n\nEjemplos de órdenes válidas:\n• "20 de jamón, 2 cocas y 1 kilo de tortilla"\n• "3 plumas, 2 cuadernos por 100"\n• "100 de queso, 6 huevos"\n• "50 de pan, 1 litro de leche"`);
+      return;
+    }
+
+    // Procesar todos los productos del parse
+    resultado.productos.forEach(p => {
+      const productoObj = actualizarProductoInventario(
+        p.producto,
+        p.precioPorUnidad || (p.precioTotal / p.cantidad),
+        p.unidad || "pieza",
+        0
+      );
+
+      const precioFinal = p.precioPorUnidad || (p.precioTotal / p.cantidad);
+      const subtotal = p.precioTotal || (p.cantidad * precioFinal);
+      let ganancia = 0;
+
+      if (productoObj.costo && productoObj.costo > 0) {
+        ganancia = subtotal - (productoObj.costo * p.cantidad);
+      }
+
+      ventaActual.push({
+        id: Date.now() + Math.random(),
+        usuario: usuarioActual,
+        texto: p.descripcion,
+        cantidad: p.cantidad || 1,
+        unidad: p.unidad || "pieza",
+        precio: precioFinal,
+        subtotal,
+        costo: productoObj.costo || 0,
+        ganancia
       });
-    }
-  }
 
-  return resultados;
-}
-
-/**
- * Detecta patrón: "[cantidad] [producto] por [precio]"
- * Interpreta como PROMOCIÓN
- * Ej: "3 cuadernos por 50" → { tipo: "promo", producto: "cuaderno", cantidad: 3, precio: 50 }
- */
-function detectarPromo(texto) {
-  const regex = /(\d+)\s+([a-záéíóúñ\s]+?)\s+por\s+(\d+(?:\.\d+)?)/gi;
-  const resultados = [];
-  let match;
-
-  while ((match = regex.exec(texto)) !== null) {
-    const cantidad = parseInt(match[1]);
-    const productoRaw = match[2].trim();
-    const precio = parseFloat(match[3]);
-
-    const producto = normalizarProducto(productoRaw);
-
-    resultados.push({
-      tipo: "promo",
-      producto,
-      cantidad,
-      precio,
-      original: match[0]
+      totalVenta += subtotal;
     });
-  }
 
-  return resultados;
+    actualizarTotalVenta();
+    inputBeta.value = "";
+    previewBeta.classList.add("hidden");
+    actualizarSelectProductos();
+    renderPreVenta();
+    navigator.vibrate?.(50);
+
+    console.log(`✅ ${resultado.productos.length} producto(s) agregado(s)`);
+  };
 }
-
-/**
- * Detecta patrón: "[numero] por [precio]" (SIN nombre de producto)
- * Usa el último producto mencionado
- * Ej: "cuadernos, 3 por 50" → promoción del último producto
- */
-function detectarPromoSinProducto(texto, ultimoProducto) {
-  const regex = /(\d+)\s+por\s+(\d+(?:\.\d+)?)/gi;
-  const resultados = [];
-  let match;
-
-  while ((match = regex.exec(texto)) !== null) {
-    const cantidad = parseInt(match[1]);
-    const precio = parseFloat(match[2]);
-
-    if (ultimoProducto) {
-      resultados.push({
-        tipo: "promo",
-        producto: ultimoProducto,
-        cantidad,
-        precio,
-        original: match[0]
-      });
-    }
-  }
-
-  return resultados;
-}
-
 // ======================================
 // 🎯 FUNCIÓN PRINCIPAL
 // ======================================
