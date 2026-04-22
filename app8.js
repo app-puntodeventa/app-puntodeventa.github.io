@@ -373,7 +373,142 @@ function actualizarPreviewLibre() {
 // ======================================
 // 🧠 PARSER ULTRA INTELIGENTE (IA)
 // ======================================
+// ======================================
+// 🧠 PARSER ULTRA INTELIGENTE (IA TIENDAS MX)
+// ======================================
 
+function parseIA(texto) {
+  if (!texto.trim()) return null;
+
+  const resultado = parseOrder(texto);
+
+  if (!resultado.success) {
+    return { esValido: false, error: resultado.error };
+  }
+
+  if (resultado.data.length === 0) {
+    return { esValido: false, error: "No reconozco productos en ese texto" };
+  }
+
+  // Convertir el resultado a formato de venta
+  const ventas = formatearParaVenta(resultado.data);
+
+  return {
+    esValido: true,
+    productos: ventas,
+    preview: resultado.preview
+  };
+}
+
+// ======================================
+// 👀 PREVIEW BETA MEJORADO
+// ======================================
+
+if (inputBeta) {
+  inputBeta.addEventListener("input", () => {
+    const resultado = parseIA(inputBeta.value);
+
+    if (!resultado.esValido) {
+      if (inputBeta.value.trim()) {
+        previewBeta.classList.remove("hidden");
+        previewBeta.innerHTML = `<span class="text-red-500">❌ ${resultado.error}</span>`;
+      } else {
+        previewBeta.classList.add("hidden");
+      }
+      return;
+    }
+
+    previewBeta.classList.remove("hidden");
+
+    let total = 0;
+    let html = '<div class="space-y-2">';
+
+    resultado.productos.forEach((p, idx) => {
+      const precioEstimado = p.precioPorUnidad || p.precioTotal || 0;
+      const precioFinal = p.precioTotal || (p.cantidad * precioEstimado);
+      total += precioFinal;
+
+      html += `
+        <div class="border-b pb-2 last:border-b-0">
+          <div class="flex justify-between text-sm">
+            <span class="font-bold">📦 ${p.descripcion}</span>
+            <span class="text-green-600 font-bold">$${precioFinal.toFixed(2)}</span>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `
+      <div class="border-t pt-2 mt-2 font-bold flex justify-between">
+        <span>Total ${resultado.productos.length} items:</span>
+        <span class="text-green-600 text-lg">$${total.toFixed(2)}</span>
+      </div>
+    </div>`;
+
+    previewBeta.innerHTML = html;
+  });
+}
+
+// ======================================
+// ➕ AGREGAR - BETA (IA) MEJORADO
+// ======================================
+
+if (btnAgregarBeta) {
+  btnAgregarBeta.onclick = () => {
+    if (!checkDemoLimit()) {
+      document.getElementById("licenseModal").classList.add("active");
+      return;
+    }
+
+    const resultado = parseIA(inputBeta.value);
+
+    if (!resultado.esValido) {
+      alert(`❌ ${resultado.error}\n\nEjemplos de órdenes válidas:\n• "20 de jamón, 2 cocas y 1 kilo de tortilla"\n• "3 plumas, 2 cuadernos por 100"\n• "100 de queso, 6 huevos"\n• "50 de pan, 1 litro de leche"`);
+      return;
+    }
+
+    // Procesar todos los productos del parse
+    resultado.productos.forEach(p => {
+      const productoObj = actualizarProductoInventario(
+        p.producto,
+        p.precioPorUnidad || (p.precioTotal / p.cantidad),
+        p.unidad || "pieza",
+        0
+      );
+
+      const precioFinal = p.precioPorUnidad || (p.precioTotal / p.cantidad);
+      const subtotal = p.precioTotal || (p.cantidad * precioFinal);
+      let ganancia = 0;
+
+      if (productoObj.costo && productoObj.costo > 0) {
+        ganancia = subtotal - (productoObj.costo * p.cantidad);
+      }
+
+      ventaActual.push({
+        id: Date.now() + Math.random(),
+        usuario: usuarioActual,
+        texto: p.descripcion,
+        cantidad: p.cantidad || 1,
+        unidad: p.unidad || "pieza",
+        precio: precioFinal,
+        subtotal,
+        costo: productoObj.costo || 0,
+        ganancia
+      });
+
+      totalVenta += subtotal;
+    });
+
+    actualizarTotalVenta();
+    inputBeta.value = "";
+    previewBeta.classList.add("hidden");
+    actualizarSelectProductos();
+    renderPreVenta();
+    navigator.vibrate?.(50);
+
+    console.log(`✅ ${resultado.productos.length} producto(s) agregado(s)`);
+  };
+}
 // ======================================
 // ➕ AGREGAR - CATÁLOGO
 // ======================================
