@@ -1,5 +1,5 @@
 // ======================================
-// 🧠 PARSER INTELIGENTE MEJORADO
+// 🧠 PARSER INTELIGENTE SÚPER FLEXIBLE
 // ======================================
 
 const PRODUCTOS_CONOCIDOS = {
@@ -19,6 +19,9 @@ const PRODUCTOS_CONOCIDOS = {
   "pluma": ["pluma"],
   "cuaderno": ["cuaderno"],
   "salchicha": ["salchicha"],
+  "panes": ["panes"],
+  "café": ["cafe", "café"],
+  "refresco": ["refresco"],
 };
 
 const UNIDADES_CONOCIDAS = {
@@ -35,121 +38,181 @@ function normalizarTexto(txt) {
 function normalizarProducto(nombre) {
   const n = normalizarTexto(nombre);
   for (const [prod, sinonimos] of Object.entries(PRODUCTOS_CONOCIDOS)) {
-    if (sinonimos.some(s => n.includes(s))) return prod;
+    if (sinonimos.some(s => n.includes(s)) || n === prod) return prod;
   }
   return n;
 }
 
-function parseOrder(texto) {
-  if (!texto.trim()) return { success: false, error: "Vacío", data: [] };
-  
-  const t = normalizarTexto(texto);
-
-  // REGLA 1: "90 de salchicha" (1 número)
-  let m = /^(\d+(?:\.\d+)?)\s+de\s+(.+)$/.exec(t);
-  if (m) {
-    return {
-      success: true,
-      error: null,
-      data: [{
-        tipo: "monto",
-        descripcion: `$${m[1]} de ${normalizarProducto(m[2])}`,
-        producto: normalizarProducto(m[2]),
-        cantidad: 1,
-        precioPorUnidad: parseFloat(m[1]),
-        precioTotal: parseFloat(m[1]),
-        unidad: "pieza"
-      }]
-    };
-  }
-
-  // REGLA 2: "3 de 9" (2 n��meros, sin producto)
-  m = /^(\d+)\s+de\s+(\d+(?:\.\d+)?)$/.exec(t);
-  if (m) {
-    const cant = parseInt(m[1]);
-    const precio = parseFloat(m[2]);
-    return {
-      success: true,
-      error: null,
-      data: [{
-        tipo: "simples",
-        descripcion: `${cant} × $${precio}`,
-        producto: "",
-        cantidad: cant,
-        precioPorUnidad: precio,
-        precioTotal: cant * precio,
-        unidad: "pieza"
-      }]
-    };
-  }
-
-  // REGLA 3: "5 elotes de a 5"
-  m = /^(\d+)\s+(.+?)\s+de\s+a\s+(\d+(?:\.\d+)?)$/.exec(t);
-  if (m) {
-    const cant = parseInt(m[1]);
-    const prod = normalizarProducto(m[2]);
-    const precio = parseFloat(m[3]);
-    return {
-      success: true,
-      error: null,
-      data: [{
-        tipo: "producto_dea",
-        descripcion: `${cant} ${prod} a $${precio}`,
-        producto: prod,
-        cantidad: cant,
-        precioPorUnidad: precio,
-        precioTotal: cant * precio,
-        unidad: "pieza"
-      }]
-    };
-  }
-
-  // REGLA 4: "2 litros de leche a 50"
-  m = /^(\d+(?:\.\d+)?)\s+(kilo|kg|kilogramo|gramo|g|litro|l|lt|pieza|pz|docena|dz|lata|latas)\s+de\s+(.+?)\s+a\s+(\d+(?:\.\d+)?)$/.exec(t);
-  if (m) {
-    const cant = parseFloat(m[1]);
-    const unidad = m[2];
-    const prod = normalizarProducto(m[3]);
-    const precio = parseFloat(m[4]);
-    return {
-      success: true,
-      error: null,
-      data: [{
-        tipo: "cantidad_precio",
-        descripcion: `${cant} ${unidad} de ${prod} a $${precio}`,
-        producto: prod,
-        cantidad: cant,
-        precioPorUnidad: precio,
-        precioTotal: cant * precio,
-        unidad
-      }]
-    };
-  }
-
-  // REGLA 5: "2 litros de leche"
-  m = /^(\d+(?:\.\d+)?)\s+(kilo|kg|kilogramo|gramo|g|litro|l|lt|pieza|pz|docena|dz|lata|latas)\s+de\s+(.+)$/.exec(t);
-  if (m) {
-    const cant = parseFloat(m[1]);
-    const unidad = m[2];
-    const prod = normalizarProducto(m[3]);
-    return {
-      success: true,
-      error: null,
-      data: [{
-        tipo: "cantidad",
-        descripcion: `${cant} ${unidad} de ${prod}`,
-        producto: prod,
-        cantidad: cant,
-        precioPorUnidad: null,
-        precioTotal: null,
-        unidad
-      }]
-    };
-  }
-
-  return { success: false, error: "Formato no reconocido", data: [] };
+function extraerNumeros(texto) {
+  return texto.match(/\d+(?:\.\d+)?/g) || [];
 }
 
-function formatearParaVenta(datos) {
-  return datos;
+function parseOrder(texto) {
+  if (!texto || !texto.trim()) return { success: false, error: "Vacío", data: [] };
+  
+  const t = normalizarTexto(texto);
+  const numeros = extraerNumeros(t);
+
+  // ========================================
+  // REGLA 1: SOLO 1 NÚMERO
+  // Ejemplo: "5" = $5
+  // Ejemplo: "90 de salchicha" = $90
+  // ========================================
+  if (numeros.length === 1) {
+    const precio = parseFloat(numeros[0]);
+    
+    // Buscar si hay nombre de producto
+    let nombreProducto = "";
+    for (const [prod] of Object.entries(PRODUCTOS_CONOCIDOS)) {
+      if (t.includes(prod)) {
+        nombreProducto = prod;
+        break;
+      }
+    }
+    
+    if (nombreProducto) {
+      return {
+        success: true,
+        error: null,
+        data: [{
+          tipo: "con_nombre",
+          descripcion: `$${precio} de ${nombreProducto}`,
+          producto: nombreProducto,
+          cantidad: 1,
+          precioPorUnidad: precio,
+          precioTotal: precio,
+          unidad: "pieza"
+        }]
+      };
+    } else {
+      // Sin nombre de producto, solo precio
+      return {
+        success: true,
+        error: null,
+        data: [{
+          tipo: "solo_precio",
+          descripcion: `$${precio}`,
+          producto: "",
+          cantidad: 1,
+          precioPorUnidad: precio,
+          precioTotal: precio,
+          unidad: "pieza"
+        }]
+      };
+    }
+  }
+
+  // ========================================
+  // REGLA 2: 2 NÚMEROS
+  // Ejemplo: "4 5" = 4×$5 = $20
+  // Ejemplo: "3 de 9" = 3×$9 = $27
+  // Ejemplo: "4 panes 5" = 4 panes × $5
+  // ========================================
+  if (numeros.length === 2) {
+    const cantidad = parseInt(numeros[0]);
+    const precio = parseFloat(numeros[1]);
+    const subtotal = cantidad * precio;
+    
+    // Buscar nombre de producto
+    let nombreProducto = "";
+    for (const [prod] of Object.entries(PRODUCTOS_CONOCIDOS)) {
+      if (t.includes(prod)) {
+        nombreProducto = prod;
+        break;
+      }
+    }
+    
+    if (nombreProducto) {
+      return {
+        success: true,
+        error: null,
+        data: [{
+          tipo: "cantidad_precio_producto",
+          descripcion: `${cantidad} ${nombreProducto} a $${precio}`,
+          producto: nombreProducto,
+          cantidad,
+          precioPorUnidad: precio,
+          precioTotal: subtotal,
+          unidad: "pieza"
+        }]
+      };
+    } else {
+      // Sin nombre
+      return {
+        success: true,
+        error: null,
+        data: [{
+          tipo: "cantidad_precio",
+          descripcion: `${cantidad} × $${precio}`,
+          producto: "",
+          cantidad,
+          precioPorUnidad: precio,
+          precioTotal: subtotal,
+          unidad: "pieza"
+        }]
+      };
+    }
+  }
+
+  // ========================================
+  // REGLA 3: CON UNIDAD + PRODUCTO + PRECIO (3+ números)
+  // Ejemplo: "2 litros de leche a 50" = 2×$50 = $100
+  // ========================================
+  if (numeros.length >= 3) {
+    const cantidad = parseFloat(numeros[0]);
+    const precio = parseFloat(numeros[numeros.length - 1]); // Último número es el precio
+    const subtotal = cantidad * precio;
+    
+    // Buscar unidad
+    let unidad = "pieza";
+    for (const [unit, variantes] of Object.entries(UNIDADES_CONOCIDAS)) {
+      for (const v of variantes) {
+        if (t.includes(v)) {
+          unidad = unit;
+          break;
+        }
+      }
+    }
+    
+    // Buscar producto
+    let nombreProducto = "";
+    for (const [prod] of Object.entries(PRODUCTOS_CONOCIDOS)) {
+      if (t.includes(prod)) {
+        nombreProducto = prod;
+        break;
+      }
+    }
+    
+    if (nombreProducto) {
+      return {
+        success: true,
+        error: null,
+        data: [{
+          tipo: "completo",
+          descripcion: `${cantidad} ${unidad} de ${nombreProducto} a $${precio}`,
+          producto: nombreProducto,
+          cantidad,
+          precioPorUnidad: precio,
+          precioTotal: subtotal,
+          unidad
+        }]
+      };
+    } else {
+      return {
+        success: true,
+        error: null,
+        data: [{
+          tipo: "cantidad_unidad_precio",
+          descripcion: `${cantidad} ${unidad} a $${precio}`,
+          producto: "",
+          cantidad,
+          precioPorUnidad: precio,
+          precioTotal: subtotal,
+          unidad
+        }]
+      };
+    }
+  }
+
+  return { success: false, error: "No se reconocen números", data: [] };
 }
