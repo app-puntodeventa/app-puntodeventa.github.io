@@ -1,0 +1,711 @@
+// ======================================
+// 🔐 CONFIGURACIÓN GLOBAL
+// ======================================
+
+const VALID_PINS = {
+  "4829": "ADMIN",
+  "7391": "TURNO 1",
+  "6158": "TURNO 2"
+};
+
+let usuarioActual = null;
+let carrito = [];
+let totalVenta = 0;
+let ultimaVenta = null;
+let datosVentas = {};
+let inventarioLocal = [];
+
+function cargarDatos() {
+  datosVentas = JSON.parse(localStorage.getItem("POS_VENTAS")) || {};
+  inventarioLocal = JSON.parse(localStorage.getItem("POS_INVENTARIO")) || [];
+  mostrarDemoHint();
+}
+
+function mostrarDemoHint() {
+  if (!localStorage.getItem("usuarioActivo")) {
+    document.getElementById("demoHint").classList.add("show");
+  }
+}
+
+function guardarDatos() {
+  localStorage.setItem("POS_VENTAS", JSON.stringify(datosVentas));
+  localStorage.setItem("POS_INVENTARIO", JSON.stringify(inventarioLocal));
+}
+
+// ========================================
+// 🔐 LOGIN
+// ========================================
+
+const pinInput = document.getElementById("pinInput");
+const togglePin = document.getElementById("togglePin");
+const btnLogin = document.getElementById("btnLogin");
+
+togglePin.onclick = () => {
+  const tipo = pinInput.type === "password" ? "text" : "password";
+  pinInput.type = tipo;
+  togglePin.innerHTML = tipo === "password" ? '<i class="bi bi-eye"></i>' : '<i class="bi bi-eye-slash"></i>';
+};
+
+pinInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") btnLogin.click();
+});
+
+btnLogin.onclick = () => {
+  const pin = pinInput.value.trim();
+  
+  if (!VALID_PINS[pin]) {
+    alert("❌ PIN incorrecto");
+    pinInput.value = "";
+    return;
+  }
+
+  usuarioActual = VALID_PINS[pin];
+  localStorage.setItem("usuarioActivo", usuarioActual);
+  
+  if (!datosVentas[usuarioActual]) {
+    datosVentas[usuarioActual] = [];
+  }
+
+  document.getElementById("loginScreen").classList.add("hidden");
+  document.getElementById("mainApp").classList.remove("hidden");
+  document.getElementById("userDisplay").textContent = `Usuario: ${usuarioActual}`;
+
+  actualizarEstadisticas();
+  actualizarSelectProductos();
+  renderHistorial();
+};
+
+// ========================================
+// 🚪 LOGOUT
+// ========================================
+
+document.getElementById("btnLogout").onclick = () => {
+  if (confirm("¿Seguro que deseas cerrar sesión?")) {
+    localStorage.removeItem("usuarioActivo");
+    location.reload();
+  }
+};
+
+// ========================================
+// 🏪 INVENTARIO
+// ========================================
+
+function actualizarProductoInventario(nombre, precio, unidad = "pieza") {
+  const nombreNorm = nombre.toLowerCase().trim();
+  let prod = inventarioLocal.find(p => p.nombre.toLowerCase() === nombreNorm);
+  
+  if (!prod) {
+    prod = {
+      id: Date.now(),
+      nombre: nombreNorm,
+      precio,
+      unidad,
+      stock: 0,
+      costo: null,
+      fechaCreacion: new Date().toLocaleString()
+    };
+    inventarioLocal.push(prod);
+  } else {
+    prod.precio = precio;
+  }
+  
+  guardarDatos();
+  return prod;
+}
+
+function buscarProducto(nombre) {
+  const nombreNorm = nombre.toLowerCase().trim();
+  return inventarioLocal.find(p => p.nombre.toLowerCase().includes(nombreNorm) || nombreNorm.includes(p.nombre.toLowerCase()));
+}
+
+// ========================================
+// 🛍️ ACTUALIZAR SELECT
+// ========================================
+
+function actualizarSelectProductos() {
+  const select = document.getElementById("selectProd");
+  select.innerHTML = '<option value="">-- Selecciona un producto --</option>';
+  
+  inventarioLocal.sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach(p => {
+    const opt = document.createElement("option");
+    opt.value = p.nombre;
+    opt.textContent = `${p.nombre.toUpperCase()} - $${p.precio.toFixed(2)}`;
+    select.appendChild(opt);
+  });
+}
+
+// ========================================
+// 🔍 BÚSQUEDA
+// ========================================
+
+document.getElementById("searchProd").addEventListener("input", (e) => {
+  const query = e.target.value.toLowerCase();
+  const select = document.getElementById("selectProd");
+  const opciones = select.querySelectorAll("option");
+  
+  opciones.forEach((opt, idx) => {
+    if (idx === 0) return;
+    const visible = opt.textContent.toLowerCase().includes(query);
+    opt.style.display = visible ? "block" : "none";
+    
+    if (visible && !select.value) {
+      select.value = opt.value;
+      actualizarPreviewCatalogo();
+    }
+  });
+});
+
+// ========================================
+// 👀 PREVISUALIZACIONES
+// ========================================
+
+document.getElementById("selectProd").addEventListener("change", actualizarPreviewCatalogo);
+document.getElementById("cantidadCat").addEventListener("input", actualizarPreviewCatalogo);
+
+function actualizarPreviewCatalogo() {
+  const nombre = document.getElementById("selectProd").value;
+  const cantidad = parseInt(document.getElementById("cantidadCat").value) || 1;
+  const preview = document.getElementById("previewCat");
+  
+  if (!nombre) {
+    preview.innerHTML = "";
+    return;
+  }
+  
+  const prod = buscarProducto(nombre);
+  if (prod) {
+    const total = cantidad * prod.precio;
+    preview.innerHTML = `<strong>${cantidad} × ${prod.nombre}</strong> = <span class="text-green-600 font-bold">$${total.toFixed(2)}</span>`;
+  }
+}
+
+[document.getElementById("nombrMan"), document.getElementById("cantidadMan"), document.getElementById("precioMan")].forEach(el => {
+  el?.addEventListener("input", actualizarPreviewManual);
+});
+
+function actualizarPreviewManual() {
+  const nombre = document.getElementById("nombrMan").value;
+  const cantidad = parseInt(document.getElementById("cantidadMan").value) || 1;
+  const precio = parseFloat(document.getElementById("precioMan").value) || 0;
+  const preview = document.getElementById("previewMan");
+  
+  if (!nombre) {
+    preview.innerHTML = "";
+    return;
+  }
+  
+  if (precio > 0) {
+    const total = cantidad * precio;
+    preview.innerHTML = `<strong>${cantidad} × ${nombre}</strong> = <span class="text-green-600 font-bold">$${total.toFixed(2)}</span>`;
+  } else {
+    preview.innerHTML = `<span class="text-yellow-600">⚠️ Ingresa un precio</span>`;
+  }
+}
+
+document.getElementById("inputRapido").addEventListener("input", actualizarPreviewRapido);
+
+function actualizarPreviewRapido() {
+  const texto = document.getElementById("inputRapido").value;
+  const preview = document.getElementById("previewRap");
+  
+  if (!texto.trim()) {
+    preview.classList.add("hidden");
+    return;
+  }
+  
+  const resultado = parseOrder(texto);
+  
+  if (!resultado.success) {
+    preview.classList.remove("hidden");
+    preview.innerHTML = `<span class="text-red-600 text-xs">❌ ${resultado.error}</span>`;
+    return;
+  }
+  
+  if (resultado.data.length === 0) {
+    preview.classList.add("hidden");
+    return;
+  }
+  
+  let html = "";
+  let total = 0;
+  
+  resultado.data.forEach(prod => {
+    const subtotal = prod.precioTotal || (prod.cantidad * (prod.precioPorUnidad || 0));
+    total += subtotal;
+    html += `<div><strong>${prod.descripcion}</strong> = <span class="text-green-600 font-bold">$${subtotal.toFixed(2)}</span></div>`;
+  });
+  
+  html += `<div class="font-bold mt-2 border-t pt-2 text-xs">Total: <span class="text-green-600">$${total.toFixed(2)}</span></div>`;
+  
+  preview.classList.remove("hidden");
+  preview.innerHTML = html;
+}
+
+// ========================================
+// ➕ AGREGAR AL CARRITO
+// ========================================
+
+document.getElementById("btnAgrCat").onclick = () => {
+  const nombre = document.getElementById("selectProd").value;
+  const cantidad = parseInt(document.getElementById("cantidadCat").value) || 1;
+  
+  if (!nombre) {
+    alert("❌ Selecciona un producto");
+    return;
+  }
+  
+  const prod = buscarProducto(nombre);
+  if (!prod) {
+    alert("❌ Producto no encontrado");
+    return;
+  }
+  
+  const subtotal = cantidad * prod.precio;
+  
+  carrito.push({
+    id: Date.now() + Math.random(),
+    nombre: prod.nombre,
+    cantidad,
+    precio: prod.precio,
+    subtotal,
+    unidad: prod.unidad
+  });
+  
+  totalVenta += subtotal;
+  
+  document.getElementById("selectProd").value = "";
+  document.getElementById("cantidadCat").value = "1";
+  document.getElementById("searchProd").value = "";
+  document.getElementById("previewCat").innerHTML = "";
+  
+  renderCarrito();
+  navigator.vibrate?.(30);
+};
+
+document.getElementById("btnAgrMan").onclick = () => {
+  const nombre = document.getElementById("nombrMan").value.trim();
+  const cantidad = parseInt(document.getElementById("cantidadMan").value) || 1;
+  const precio = parseFloat(document.getElementById("precioMan").value) || 0;
+  
+  if (!nombre) {
+    alert("❌ Ingresa nombre del producto");
+    return;
+  }
+  
+  if (precio <= 0) {
+    alert("❌ Ingresa un precio válido");
+    return;
+  }
+  
+  const subtotal = cantidad * precio;
+  
+  actualizarProductoInventario(nombre, precio, "pieza");
+  
+  carrito.push({
+    id: Date.now() + Math.random(),
+    nombre,
+    cantidad,
+    precio,
+    subtotal,
+    unidad: "pieza"
+  });
+  
+  totalVenta += subtotal;
+  
+  document.getElementById("nombrMan").value = "";
+  document.getElementById("cantidadMan").value = "1";
+  document.getElementById("precioMan").value = "";
+  document.getElementById("previewMan").innerHTML = "";
+  
+  actualizarSelectProductos();
+  renderCarrito();
+  navigator.vibrate?.(30);
+};
+
+document.getElementById("btnAgrRap").onclick = () => {
+  const texto = document.getElementById("inputRapido").value;
+  
+  if (!texto.trim()) {
+    alert("❌ Ingresa una descripción");
+    return;
+  }
+  
+  const resultado = parseOrder(texto);
+  
+  if (!resultado.success) {
+    alert(`❌ ${resultado.error}`);
+    return;
+  }
+  
+  if (resultado.data.length === 0) {
+    alert("❌ No se pudo procesar");
+    return;
+  }
+  
+  resultado.data.forEach(prod => {
+    const subtotal = prod.precioTotal || (prod.cantidad * (prod.precioPorUnidad || 0));
+    
+    if (prod.producto && prod.producto.trim()) {
+      actualizarProductoInventario(prod.producto, prod.precioPorUnidad || (subtotal / prod.cantidad), prod.unidad || "pieza");
+    }
+    
+    carrito.push({
+      id: Date.now() + Math.random(),
+      nombre: prod.descripcion,
+      cantidad: prod.cantidad,
+      precio: prod.precioPorUnidad || (subtotal / prod.cantidad),
+      subtotal,
+      unidad: prod.unidad || "pieza"
+    });
+    
+    totalVenta += subtotal;
+  });
+  
+  document.getElementById("inputRapido").value = "";
+  document.getElementById("previewRap").classList.add("hidden");
+  
+  actualizarSelectProductos();
+  renderCarrito();
+  navigator.vibrate?.(50);
+};
+
+// ========================================
+// 🛒 RENDER CARRITO
+// ========================================
+
+function renderCarrito() {
+  const cont = document.getElementById("carrito");
+  const conteo = document.getElementById("conteoCart");
+  const total = document.getElementById("totalCar");
+  
+  conteo.textContent = carrito.length;
+  total.textContent = "$" + totalVenta.toFixed(2);
+  
+  if (carrito.length === 0) {
+    cont.innerHTML = '<p class="text-center text-gray-400 text-xs sm:text-sm py-3">Carrito vacío</p>';
+    return;
+  }
+  
+  cont.innerHTML = carrito.map((item, idx) => `
+    <div class="flex justify-between items-center bg-white p-2 rounded-lg border-l-4 border-blue-400 text-xs sm:text-sm">
+      <div class="flex-1 min-w-0">
+        <p class="font-bold truncate">${item.nombre}</p>
+        <p class="text-xs text-gray-500">${item.cantidad} × $${item.precio.toFixed(2)}</p>
+      </div>
+      <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+        <span class="font-bold text-green-600 w-12 sm:w-16 text-right">$${item.subtotal.toFixed(2)}</span>
+        <button onclick="eliminarDelCarrito(${idx})" class="text-red-500 hover:bg-red-100 p-1 rounded transition">
+          <i class="bi bi-trash"></i>
+        </button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function eliminarDelCarrito(idx) {
+  totalVenta -= carrito[idx].subtotal;
+  carrito.splice(idx, 1);
+  renderCarrito();
+}
+
+// ========================================
+// 💳 FINALIZAR VENTA
+// ========================================
+
+document.getElementById("btnFinalizarVenta").onclick = () => {
+  if (carrito.length === 0) {
+    alert("❌ Carrito vacío");
+    return;
+  }
+  
+  const venta = {
+    id: Date.now(),
+    fecha: new Date().toLocaleString(),
+    items: [...carrito],
+    total: totalVenta,
+    usuario: usuarioActual
+  };
+  
+  ultimaVenta = venta;
+  
+  if (!datosVentas[usuarioActual]) {
+    datosVentas[usuarioActual] = [];
+  }
+  
+  datosVentas[usuarioActual].push(venta);
+  guardarDatos();
+  
+  // Mostrar modal de comprobante y QR
+  mostrarComprobanteQR(venta);
+  
+  renderHistorial();
+  actualizarEstadisticas();
+  limpiarCarrito();
+};
+
+function limpiarCarrito() {
+  carrito = [];
+  totalVenta = 0;
+  document.getElementById("nombrMan").value = "";
+  document.getElementById("cantidadMan").value = "1";
+  document.getElementById("precioMan").value = "";
+  document.getElementById("selectProd").value = "";
+  document.getElementById("cantidadCat").value = "1";
+  document.getElementById("inputRapido").value = "";
+  document.getElementById("previewCat").innerHTML = "";
+  document.getElementById("previewMan").innerHTML = "";
+  document.getElementById("previewRap").classList.add("hidden");
+  renderCarrito();
+}
+
+// ========================================
+// 🧾 COMPROBANTE Y QR
+// ========================================
+
+function mostrarComprobanteQR(venta) {
+  // Generar texto del comprobante legible
+  let comprobanteTexto = `
+═══════════════════════════════════
+        COMPROBANTE DE VENTA
+═══════════════════════════════════
+
+Usuario: ${venta.usuario}
+Fecha: ${venta.fecha}
+
+───────────────────────────────────
+DETALLE DE COMPRA:
+───────────────────────────────────
+`;
+
+  venta.items.forEach(item => {
+    const linea = `${item.nombre} x${item.cantidad}`.padEnd(30, '.');
+    comprobanteTexto += `${linea}$${item.subtotal.toFixed(2)}\n`;
+  });
+
+  comprobanteTexto += `───────────────────────────────────
+TOTAL:                        $${venta.total.toFixed(2)}
+═══════════════════════════════════
+¡Gracias por su compra! 😊
+═══════════════════════════════════`;
+
+  document.getElementById("comprobante").textContent = comprobanteTexto;
+
+  // Generar QR
+  const qrContainer = document.getElementById("qrCode");
+  qrContainer.innerHTML = "";
+  
+  const qrData = comprobanteTexto;
+  
+  new QRCode(qrContainer, {
+    text: qrData,
+    width: 250,
+    height: 250,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  // Abrir modal
+  document.getElementById("modalComprobante").showModal();
+}
+
+// ========================================
+// 📤 COMPARTIR POR WHATSAPP
+// ========================================
+
+function compartirWhatsApp() {
+  if (!ultimaVenta) return;
+
+  const venta = ultimaVenta;
+  
+  let mensaje = `🧾 *COMPROBANTE DE VENTA*\n\n`;
+  mensaje += `👤 Usuario: ${venta.usuario}\n`;
+  mensaje += `📅 Fecha: ${venta.fecha}\n\n`;
+  mensaje += `*Detalles de la compra:*\n`;
+  mensaje += `━━━━━━━━━━━━━━━━━━\n`;
+  
+  venta.items.forEach(item => {
+    mensaje += `${item.nombre}\n`;
+    mensaje += `${item.cantidad} × $${item.precio.toFixed(2)} = $${item.subtotal.toFixed(2)}\n\n`;
+  });
+  
+  mensaje += `━━━━━━━━━━━━━━━━━━\n`;
+  mensaje += `💰 *TOTAL: $${venta.total.toFixed(2)}*\n\n`;
+  mensaje += `Gracias por su compra! 😊`;
+  
+  const mensajeCodificado = encodeURIComponent(mensaje);
+  const whatsappUrl = `https://wa.me/?text=${mensajeCodificado}`;
+  
+  window.open(whatsappUrl, "_blank");
+}
+
+// ========================================
+// 📥 DESCARGAR QR
+// ========================================
+
+function descargarQR() {
+  const qrCanvas = document.querySelector("#qrCode canvas");
+  if (!qrCanvas) {
+    alert("⚠️ QR no generado");
+    return;
+  }
+
+  const link = document.createElement("a");
+  link.href = qrCanvas.toDataURL("image/png");
+  link.download = `comprobante-${ultimaVenta.id}.png`;
+  link.click();
+}
+
+// ========================================
+// 📊 ESTADÍSTICAS
+// ========================================
+
+function actualizarEstadisticas() {
+  const ventas = datosVentas[usuarioActual] || [];
+  const totalVentas = ventas.reduce((acc, v) => acc + v.total, 0);
+  const countVentas = ventas.length;
+  
+  document.getElementById("statVentas").textContent = countVentas;
+  document.getElementById("statTotal").textContent = "$" + totalVentas.toFixed(2);
+  document.getElementById("statIngresos").textContent = "$" + totalVentas.toFixed(2);
+  document.getElementById("statGanancia").textContent = "$0.00";
+}
+
+// ========================================
+// 📚 HISTORIAL
+// ========================================
+
+function renderHistorial() {
+  const cont = document.getElementById("listaVentas");
+  const ventas = datosVentas[usuarioActual] || [];
+  
+  if (ventas.length === 0) {
+    cont.innerHTML = '<div class="text-center text-gray-400 py-8"><i class="bi bi-inbox text-4xl mb-3"></i><p class="text-sm sm:text-base">No hay ventas registradas</p></div>';
+    return;
+  }
+  
+  cont.innerHTML = ventas.reverse().map(v => `
+    <div class="bg-white rounded-lg shadow-md p-3 sm:p-4 border-l-4 border-green-500 animate-in">
+      <div class="flex justify-between items-start mb-3">
+        <div>
+          <p class="font-bold text-gray-800 text-sm sm:text-base">🧾 Venta</p>
+          <p class="text-xs text-gray-500">${v.fecha}</p>
+        </div>
+        <span class="text-xs sm:text-sm bg-green-100 text-green-800 px-2 sm:px-3 py-1 rounded-full font-bold">${v.items.length} items</span>
+      </div>
+      
+      <div class="bg-gray-50 rounded p-2 mb-3 max-h-32 overflow-y-auto text-xs sm:text-sm space-y-1">
+        ${v.items.map(item => `
+          <div class="flex justify-between">
+            <span>${item.cantidad}× ${item.nombre}</span>
+            <span class="font-bold">$${item.subtotal.toFixed(2)}</span>
+          </div>
+        `).join("")}
+      </div>
+      
+      <div class="flex justify-between items-center mb-3">
+        <span class="font-bold text-sm sm:text-base">Total:</span>
+        <span class="text-xl sm:text-2xl font-bold text-green-600">$${v.total.toFixed(2)}</span>
+      </div>
+      
+      <div class="flex gap-2 flex-wrap">
+        <button onclick="mostrarComprobanteQR(${JSON.stringify(v).replace(/"/g, '&quot;')})" class="flex-1 min-w-20 bg-purple-600 hover:bg-purple-700 text-white px-2 sm:px-3 py-2 rounded font-bold text-xs sm:text-sm transition">
+          📤 Compartir
+        </button>
+        <button onclick="descargarTicket(${v.id})" class="flex-1 min-w-20 bg-blue-600 hover:bg-blue-700 text-white px-2 sm:px-3 py-2 rounded font-bold text-xs sm:text-sm transition">
+          📄 Ticket
+        </button>
+        <button onclick="eliminarVenta('${usuarioActual}', ${v.id})" class="flex-1 min-w-20 bg-red-600 hover:bg-red-700 text-white px-2 sm:px-3 py-2 rounded font-bold text-xs sm:text-sm transition">
+          🗑️ Eliminar
+        </button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function eliminarVenta(usuario, ventaId) {
+  if (!confirm("¿Eliminar esta venta?")) return;
+  
+  datosVentas[usuario] = datosVentas[usuario].filter(v => v.id !== ventaId);
+  guardarDatos();
+  renderHistorial();
+  actualizarEstadisticas();
+}
+
+function descargarTicket(ventaId) {
+  const venta = datosVentas[usuarioActual].find(v => v.id === ventaId);
+  if (!venta) return;
+  
+  const html = `
+    <div style="text-align:center; font-family:Arial; width:300px; margin:0 auto; padding:20px;">
+      <h2 style="margin:0">🧾 TICKET DE VENTA</h2>
+      <p>Usuario: ${venta.usuario}</p>
+      <p>Fecha: ${venta.fecha}</p>
+      <hr>
+      ${venta.items.map(item => `
+        <div style="text-align:left; margin:5px 0;">
+          <strong>${item.nombre}</strong><br>
+          ${item.cantidad} × $${item.precio.toFixed(2)} = $${item.subtotal.toFixed(2)}
+        </div>
+      `).join("")}
+      <hr>
+      <h3>TOTAL: $${venta.total.toFixed(2)}</h3>
+    </div>
+  `;
+  
+  const win = window.open("", "_blank");
+  win.document.write(html);
+  win.document.close();
+  win.print();
+}
+
+// ========================================
+// 🎫 PESTAÑAS
+// ========================================
+
+document.querySelectorAll(".tabVenta").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".tabVenta").forEach(b => {
+      b.classList.remove("border-blue-500", "text-blue-600");
+      b.classList.add("border-transparent", "text-gray-600");
+    });
+    
+    document.querySelectorAll(".tabContent").forEach(tab => tab.classList.add("hidden"));
+    
+    btn.classList.add("border-blue-500", "text-blue-600");
+    btn.classList.remove("border-transparent", "text-gray-600");
+    
+    const tabName = btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1);
+    document.getElementById("tab" + tabName).classList.remove("hidden");
+  };
+});
+
+// ========================================
+// 🆕 NUEVA VENTA
+// ========================================
+
+document.getElementById("btnNuevaVenta").onclick = () => {
+  limpiarCarrito();
+  document.getElementById("modalVenta").showModal();
+  setTimeout(() => {
+    document.getElementById("selectProd").focus();
+  }, 100);
+};
+
+// ========================================
+// 🔄 INICIALIZAR
+// ========================================
+
+cargarDatos();
+
+if (localStorage.getItem("usuarioActivo")) {
+  usuarioActual = localStorage.getItem("usuarioActivo");
+  document.getElementById("loginScreen").classList.add("hidden");
+  document.getElementById("mainApp").classList.remove("hidden");
+  document.getElementById("userDisplay").textContent = `Usuario: ${usuarioActual}`;
+  actualizarEstadisticas();
+  actualizarSelectProductos();
+  renderHistorial();
+}
+
+console.log("✅ POS Pro 2.0 - Sistema listo");
