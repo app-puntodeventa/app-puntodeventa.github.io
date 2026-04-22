@@ -11,11 +11,10 @@ const VALID_PINS = {
 let usuarioActual = null;
 let carrito = [];
 let totalVenta = 0;
-let ultimoTotalVenta = 0; // IMPORTANTE: Guardar el total actual
+let ultimoTotalVenta = 0;
 let datosVentas = {};
 let inventarioLocal = [];
 
-// Cargar datos al iniciar
 function cargarDatos() {
   datosVentas = JSON.parse(localStorage.getItem("POS_VENTAS")) || {};
   inventarioLocal = JSON.parse(localStorage.getItem("POS_INVENTARIO")) || [];
@@ -67,7 +66,6 @@ btnLogin.onclick = () => {
     datosVentas[usuarioActual] = [];
   }
 
-  // Mostrar app
   document.getElementById("loginScreen").classList.add("hidden");
   document.getElementById("mainApp").classList.remove("hidden");
   document.getElementById("userDisplay").textContent = `Usuario: ${usuarioActual}`;
@@ -219,7 +217,7 @@ function actualizarPreviewRapido() {
   
   if (!resultado.success) {
     preview.classList.remove("hidden");
-    preview.innerHTML = `<span class="text-red-600">❌ ${resultado.error}</span>`;
+    preview.innerHTML = `<span class="text-red-600 text-xs">❌ ${resultado.error}</span>`;
     return;
   }
   
@@ -237,7 +235,7 @@ function actualizarPreviewRapido() {
     html += `<div><strong>${prod.descripcion}</strong> = <span class="text-green-600 font-bold">$${subtotal.toFixed(2)}</span></div>`;
   });
   
-  html += `<div class="font-bold mt-2 border-t pt-2">Total: <span class="text-green-600">$${total.toFixed(2)}</span></div>`;
+  html += `<div class="font-bold mt-2 border-t pt-2 text-xs">Total: <span class="text-green-600">$${total.toFixed(2)}</span></div>`;
   
   preview.classList.remove("hidden");
   preview.innerHTML = html;
@@ -420,10 +418,8 @@ document.getElementById("btnFinalizarVenta").onclick = () => {
     return;
   }
   
-  // GUARDAR EL TOTAL ACTUAL ANTES DE LIMPIAR
   ultimoTotalVenta = totalVenta;
   
-  // Registrar venta
   const venta = {
     id: Date.now(),
     fecha: new Date().toLocaleString(),
@@ -439,19 +435,15 @@ document.getElementById("btnFinalizarVenta").onclick = () => {
   datosVentas[usuarioActual].push(venta);
   guardarDatos();
   
-  // Cerrar modal y limpiar
   document.getElementById("modalVenta").close();
   
-  // Mostrar venta en historial
   renderHistorial();
   actualizarEstadisticas();
   
-  // Limpiar carrito
   limpiarCarrito();
   
   alert("✅ Venta registrada");
   
-  // Mostrar modal de cambio CON EL TOTAL GUARDADO
   setTimeout(() => {
     document.getElementById("cambioTotal").textContent = "$" + ultimoTotalVenta.toFixed(2);
     document.getElementById("montoPagado").value = "";
@@ -478,7 +470,7 @@ function limpiarCarrito() {
 
 function calcularCambioFuncion() {
   const monto = parseFloat(document.getElementById("montoPagado").value) || 0;
-  const total = ultimoTotalVenta; // USAR EL TOTAL GUARDADO
+  const total = ultimoTotalVenta;
   const resultado = document.getElementById("resultCambio");
   
   if (monto <= 0) {
@@ -523,7 +515,7 @@ function renderHistorial() {
   const ventas = datosVentas[usuarioActual] || [];
   
   if (ventas.length === 0) {
-    cont.innerHTML = '<div class="text-center text-gray-400 py-8"><i class="bi bi-inbox text-4 sm:text-5xl mb-3"></i><p class="text-sm sm:text-base">No hay ventas registradas</p></div>';
+    cont.innerHTML = '<div class="text-center text-gray-400 py-8"><i class="bi bi-inbox text-4xl mb-3"></i><p class="text-sm sm:text-base">No hay ventas registradas</p></div>';
     return;
   }
   
@@ -555,8 +547,8 @@ function renderHistorial() {
         <button onclick="descargarTicket(${v.id})" class="flex-1 min-w-20 bg-blue-600 hover:bg-blue-700 text-white px-2 sm:px-3 py-2 rounded font-bold text-xs sm:text-sm transition">
           📄 Ticket
         </button>
-        <button onclick="generarQRVenta(${v.id})" class="flex-1 min-w-20 bg-purple-600 hover:bg-purple-700 text-white px-2 sm:px-3 py-2 rounded font-bold text-xs sm:text-sm transition">
-          📱 QR
+        <button onclick="compartirWhatsApp(${v.id})" class="flex-1 min-w-20 bg-green-600 hover:bg-green-700 text-white px-2 sm:px-3 py-2 rounded font-bold text-xs sm:text-sm transition">
+          📱 WhatsApp
         </button>
         <button onclick="eliminarVenta('${usuarioActual}', ${v.id})" class="flex-1 min-w-20 bg-red-600 hover:bg-red-700 text-white px-2 sm:px-3 py-2 rounded font-bold text-xs sm:text-sm transition">
           🗑️ Eliminar
@@ -602,35 +594,33 @@ function descargarTicket(ventaId) {
   win.print();
 }
 
-function generarQRVenta(ventaId) {
+function compartirWhatsApp(ventaId) {
   const venta = datosVentas[usuarioActual].find(v => v.id === ventaId);
   if (!venta) return;
   
-  const datos = JSON.stringify({
-    usuario: venta.usuario,
-    fecha: venta.fecha,
-    total: venta.total,
-    items: venta.items.map(i => ({ nombre: i.nombre, cantidad: i.cantidad, precio: i.precio }))
+  // Crear mensaje con formato legible
+  let mensaje = `🧾 *COMPROBANTE DE VENTA*\n\n`;
+  mensaje += `👤 Usuario: ${venta.usuario}\n`;
+  mensaje += `📅 Fecha: ${venta.fecha}\n\n`;
+  mensaje += `*Detalles de la compra:*\n`;
+  mensaje += `━━━━━━━━━━━━━━━━━━\n`;
+  
+  venta.items.forEach(item => {
+    mensaje += `${item.nombre}\n`;
+    mensaje += `${item.cantidad} × $${item.precio.toFixed(2)} = $${item.subtotal.toFixed(2)}\n\n`;
   });
   
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(datos)}`;
+  mensaje += `━━━━━━━━━━━━━━━━━━\n`;
+  mensaje += `💰 *TOTAL: $${venta.total.toFixed(2)}*\n\n`;
+  mensaje += `Gracias por su compra! 😊`;
   
-  const modal = document.createElement("div");
-  modal.className = "fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 overflow-y-auto";
-  modal.innerHTML = `
-    <div class="bg-white rounded-xl p-4 sm:p-6 max-w-sm w-full shadow-2xl my-auto">
-      <h2 class="text-xl sm:text-2xl font-bold text-center mb-4">📱 QR Venta</h2>
-      <img src="${qrUrl}" class="w-full mb-4 p-4 bg-gray-50 rounded-lg">
-      <p class="text-center text-gray-600 mb-4">Total: <strong>$${venta.total.toFixed(2)}</strong></p>
-      <div class="flex gap-2">
-        <button onclick="this.closest('.fixed').remove()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 rounded-lg transition text-sm">Cerrar</button>
-        <a href="${qrUrl}" download="qr-${ventaId}.png" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg transition text-center text-sm">Descargar</a>
-      </div>
-    </div>
-  `;
+  // Codificar el mensaje
+  const mensajeCodificado = encodeURIComponent(mensaje);
   
-  document.body.appendChild(modal);
-  modal.onclick = (e) => e.target === modal && modal.remove();
+  // Link a WhatsApp (sin número, abre el chat de inicio)
+  const whatsappUrl = `https://wa.me/?text=${mensajeCodificado}`;
+  
+  window.open(whatsappUrl, "_blank");
 }
 
 // ========================================
@@ -729,7 +719,6 @@ document.getElementById("btnReporte").onclick = () => {
 
 cargarDatos();
 
-// Verificar si ya está logeado
 if (localStorage.getItem("usuarioActivo")) {
   usuarioActual = localStorage.getItem("usuarioActivo");
   document.getElementById("loginScreen").classList.add("hidden");
