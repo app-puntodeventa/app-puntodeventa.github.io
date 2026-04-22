@@ -719,13 +719,15 @@ if (btnCerrar) {
 const btnPDF = document.getElementById("btnPDF");
 if (btnPDF) {
   btnPDF.onclick = () => {
-    if (typeof jsPDF === "undefined") {
-      alert("Error: jsPDF no está cargado");
+    // Verificar que jsPDF está disponible
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+      alert("❌ Error: Las librerías PDF no se han cargado correctamente\n\nIntenta recargando la página (F5)");
+      console.error("jsPDF no disponible:", window.jspdf);
       return;
     }
 
-    const { jsPDF: jsPDFClass } = window.jspdf;
-    const doc = new jsPDFClass();
+    const jsPDF = window.jspdf.jsPDF;
+    const doc = new jsPDF();
 
     if (!data[usuarioActual]) {
       alert("No hay datos para generar PDF");
@@ -872,6 +874,8 @@ if (btnPDF) {
     // GUARDAR
     const fechaFormato = new Date().toISOString().split('T')[0];
     doc.save(`venta-${usuarioActual}-${fechaFormato}.pdf`);
+    
+    alert("✅ PDF generado correctamente");
   };
 }
 
@@ -882,13 +886,15 @@ if (btnPDF) {
 const btnPDFGlobal = document.getElementById("btnPDFGlobal");
 if (btnPDFGlobal) {
   btnPDFGlobal.onclick = () => {
-    if (typeof jsPDF === "undefined") {
-      alert("Error: jsPDF no está cargado");
+    // Verificar que jsPDF está disponible
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+      alert("❌ Error: Las librerías PDF no se han cargado correctamente\n\nIntenta recargando la página (F5)");
+      console.error("jsPDF no disponible:", window.jspdf);
       return;
     }
 
-    const { jsPDF: jsPDFClass } = window.jspdf;
-    const doc = new jsPDFClass();
+    const jsPDF = window.jspdf.jsPDF;
+    const doc = new jsPDF();
 
     const pageHeight = doc.internal.pageSize.getHeight();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -1055,8 +1061,11 @@ if (btnPDFGlobal) {
     // GUARDAR
     const fechaFormato = new Date().toISOString().split('T')[0];
     doc.save(`reporte-global-${fechaFormato}.pdf`);
+    
+    alert("✅ PDF Global generado correctamente");
   };
 }
+
 
 // ======================================
 // 👤 LOGOUT
