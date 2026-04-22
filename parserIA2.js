@@ -1,66 +1,43 @@
 // ======================================
-// 🧠 PARSER IA - LENGUAJE NATURAL TIENDAS MX (MEJORADO)
+// 🧠 PARSER IA MEJORADO - REGLAS CLARAS
 // ======================================
 
+/**
+ * REGLAS:
+ * 1. UN NÚMERO: "90 de salchicha" → $90 de salchicha
+ * 2. DOS NÚMEROS: "3 de 9" o "5 elotes de a 5" → cantidad × precio
+ * 3. CON UNIDAD: "2 litros de leche" → cantidad + unidad, sin guardar "de"
+ */
+
 const DICCIONARIO_PRODUCTOS = {
-  "coca": ["coka", "cocas", "coca cola", "cokas"],
-  "pepsi": ["pepsí", "pepsis"],
-  "sprite": ["sprites"],
-  "refresco": ["refrescos"],
-  "cerveza": ["cervezas"],
-  "pulque": ["pulques"],
-  "jugo": ["jugos", "zumo", "zumos"],
-  "leche": ["leches"],
-  "agua": ["aguas"],
+  "coca": ["coka", "cocas", "coca cola"],
+  "pepsi": ["pepsi", "pepsí"],
+  "sprite": ["sprite"],
+  "cerveza": ["cerveza", "cervezas"],
+  "jugo": ["jugo", "jugos", "zumo"],
+  "leche": ["leche"],
+  "agua": ["agua", "aguas"],
   "jamón": ["jamon", "jamones"],
-  "tocino": ["tocinos"],
-  "carne": ["carnes"],
-  "pollo": ["pollos"],
-  "pescado": ["pescados"],
-  "huevo": ["huevos"],
-  "queso": ["quesos"],
-  "yogurt": ["yogur", "yogurts", "yogures"],
-  "pan": ["panes"],
-  "bolillo": ["bolillos"],
-  "telera": ["teleras"],
-  "tortilla": ["tortillas"],
-  "concha": ["conchas"],
-  "dona": ["donas", "dónut", "donuts"],
-  "pastel": ["pasteles"],
-  "elote": ["elotes"],
-  "manzana": ["manzanas"],
-  "platano": ["plátano", "platanos", "plátanos", "bananas"],
-  "naranja": ["naranjas"],
-  "limon": ["limón", "limones"],
-  "tomate": ["tomates"],
-  "cebolla": ["cebollas"],
-  "ajo": ["ajos"],
-  "chile": ["chiles"],
-  "papa": ["papas", "patata", "patatas"],
-  "zanahoria": ["zanahorias"],
-  "frijol": ["frijoles", "lata de frijol", "latas de frijol"],
-  "pluma": ["plumas", "bolígrafo", "bolígrafos"],
-  "lapiz": ["lápiz", "lapices", "lápices"],
-  "cuaderno": ["cuadernos"],
-  "libreta": ["libretas"],
-  "papel": ["papeles"],
-  "hoja": ["hojas"],
+  "queso": ["queso", "quesos"],
+  "huevo": ["huevo", "huevos"],
+  "pan": ["pan", "panes"],
+  "tortilla": ["tortilla", "tortillas"],
+  "elote": ["elote", "elotes"],
+  "frijol": ["frijol", "frijoles"],
+  "pluma": ["pluma", "plumas"],
+  "cuaderno": ["cuaderno", "cuadernos"],
+  "salchicha": ["salchicha", "salchichas"],
 };
 
 const DICCIONARIO_UNIDADES = {
-  "kilo": ["kg", "kilogramo", "kilos", "kilogramos"],
-  "gramo": ["g", "gr", "grs", "gramos"],
-  "medio kilo": ["1/2 kg", "medio", "½ kg"],
-  "litro": ["l", "lt", "lts", "litros"],
-  "mililitro": ["ml", "mls", "mililitros"],
-  "pieza": ["pz", "piezas", "unidad", "unidades"],
-  "docena": ["docenas", "dz"],
-  "lata": ["latas"],
+  "kilo": ["kg", "kilogramo", "kilos"],
+  "gramo": ["g", "gr", "gramo", "gramos"],
+  "litro": ["l", "lt", "lts", "litro", "litros"],
+  "mililitro": ["ml", "mililitro", "mililitros"],
+  "pieza": ["pz", "pieza", "piezas"],
+  "docena": ["docena", "docenas", "dz"],
+  "lata": ["lata", "latas"],
 };
-
-// ======================================
-// 🧹 FUNCIONES DE NORMALIZACIÓN
-// ======================================
 
 function normalizarTexto(texto) {
   return texto
@@ -79,7 +56,7 @@ function normalizarProducto(nombre) {
   }
   
   for (const [producto, sinonimos] of Object.entries(DICCIONARIO_PRODUCTOS)) {
-    if (sinonimos.includes(nombreNorm)) {
+    if (sinonimos.some(s => nombreNorm.includes(s) || s.includes(nombreNorm))) {
       return producto;
     }
   }
@@ -102,302 +79,170 @@ function normalizarUnidad(unidad) {
 }
 
 // ======================================
-// 🔍 DETECTORES DE PATRONES (MEJORADO)
-// ======================================
-
-/**
- * Detecta: "3 kg de huevo a 30" → 3 kg a $30/kg = $90
- */
-function detectarCantidadConPrecioUnitario(texto) {
-  const regex = /(\d+(?:\.\d+)?)\s+(kilo|kg|kilogramo|gramo|g|litro|l|lt|mililitro|ml|pieza|pz|docena|dz|lata|latas)\s+de\s+([a-záéíóúñ\s]+?)\s+a\s+(\d+(?:\.\d+)?)/gi;
-  const resultados = [];
-  let match;
-
-  while ((match = regex.exec(texto)) !== null) {
-    const cantidad = parseFloat(match[1]);
-    const unidadRaw = match[2];
-    const productoRaw = match[3].trim();
-    const precioUnitario = parseFloat(match[4]);
-    
-    const unidad = normalizarUnidad(unidadRaw);
-    const producto = normalizarProducto(productoRaw);
-    const precioTotal = cantidad * precioUnitario;
-
-    resultados.push({
-      tipo: "cantidad_con_precio",
-      producto,
-      cantidad,
-      unidad,
-      precioPorUnidad: precioUnitario,
-      precioTotal,
-      original: match[0]
-    });
-  }
-
-  return resultados;
-}
-
-/**
- * Detecta: "5 elotes de a 5" → 5 × $5
- * Detecta: "2 latas de frijol de 4" → 2 × $4
- */
-function detectarPiezasConPrecio(texto) {
-  const regex = /(\d+)\s+([a-záéíóúñ\s]+?)\s+de\s+a\s+(\d+(?:\.\d+)?)/gi;
-  const resultados = [];
-  let match;
-
-  while ((match = regex.exec(texto)) !== null) {
-    const cantidad = parseInt(match[1]);
-    const productoRaw = match[2].trim();
-    const precioUnitario = parseFloat(match[3]);
-    
-    const producto = normalizarProducto(productoRaw);
-    const precioTotal = cantidad * precioUnitario;
-
-    resultados.push({
-      tipo: "pieza_con_precio",
-      producto,
-      cantidad,
-      precioPorUnidad: precioUnitario,
-      precioTotal,
-      original: match[0]
-    });
-  }
-
-  return resultados;
-}
-
-/**
- * Detecta: "3 de 9" → 3 × $9 (sin nombre de producto)
- */
-function detectarSoloNumeros(texto) {
-  const regex = /^(\d+)\s+de\s+(\d+(?:\.\d+)?)$/;
-  const match = regex.exec(normalizarTexto(texto));
-  
-  if (match) {
-    const cantidad = parseInt(match[1]);
-    const precioUnitario = parseFloat(match[2]);
-    
-    return [{
-      tipo: "numeros_solo",
-      producto: "",
-      cantidad,
-      precioPorUnidad: precioUnitario,
-      precioTotal: cantidad * precioUnitario,
-      original: match[0]
-    }];
-  }
-  
-  return [];
-}
-
-/**
- * Detecta: "20 de jamón" → $20 de jamón
- */
-function detectarMonto(texto) {
-  const regex = /(\d+(?:\.\d+)?)\s+de\s+([a-záéíóúñ\s]+?)(?:,|y|$)/gi;
-  const resultados = [];
-  let match;
-
-  while ((match = regex.exec(texto)) !== null) {
-    const valor = parseFloat(match[1]);
-    const productoRaw = match[2].trim();
-    const producto = normalizarProducto(productoRaw);
-
-    // Evitar conflicto con otros patrones
-    if (productoRaw.match(/a\s+\d+|de\s+a/)) {
-      continue;
-    }
-
-    resultados.push({
-      tipo: "monto",
-      producto,
-      valor,
-      moneda: "MXN",
-      original: match[0]
-    });
-  }
-
-  return resultados;
-}
-
-/**
- * Detecta: "1 litro de leche" 
- */
-function detectarCantidad(texto) {
-  const regex = /(\d+(?:\.\d+)?)\s+(kilo|kg|kilogramo|gramo|g|litro|l|lt|mililitro|ml|pieza|pz|docena|dz|lata|latas)\s+de\s+([a-záéíóúñ\s]+?)(?:,|y|$)/gi;
-  const resultados = [];
-  let match;
-
-  while ((match = regex.exec(texto)) !== null) {
-    const valor = parseFloat(match[1]);
-    const unidadRaw = match[2];
-    const productoRaw = match[3].trim();
-    
-    const unidad = normalizarUnidad(unidadRaw);
-    const producto = normalizarProducto(productoRaw);
-
-    resultados.push({
-      tipo: "cantidad",
-      producto,
-      valor,
-      unidad,
-      original: match[0]
-    });
-  }
-
-  return resultados;
-}
-
-/**
- * Detecta: "3 plumas" (PIEZAS sin "de")
- */
-function detectarPiezas(texto) {
-  const regex = /(\d+)\s+([a-záéíóúñ\s]+?)(?:,|y|$)/gi;
-  const resultados = [];
-  let match;
-
-  while ((match = regex.exec(texto)) !== null) {
-    const cantidad = parseInt(match[1]);
-    const productoRaw = match[2].trim();
-
-    if (productoRaw.includes("de") || productoRaw.match(/kilo|kg|litro|ml|gramo|pieza|pz|docena|lata/i)) {
-      continue;
-    }
-
-    const producto = normalizarProducto(productoRaw);
-
-    if (DICCIONARIO_PRODUCTOS[producto] || Object.values(DICCIONARIO_PRODUCTOS).flat().includes(producto)) {
-      resultados.push({
-        tipo: "pieza",
-        producto,
-        cantidad,
-        original: match[0]
-      });
-    }
-  }
-
-  return resultados;
-}
-
-// ======================================
-// 🎯 FUNCIÓN PRINCIPAL
+// 🔍 PARSER PRINCIPAL (REGLAS CLARAS)
 // ======================================
 
 function parseOrder(texto) {
   if (!texto || typeof texto !== "string" || texto.trim().length === 0) {
     return {
       success: false,
-      error: "Texto vacío o inválido",
+      error: "Texto vacío",
       data: []
     };
   }
 
   try {
     const textoNorm = normalizarTexto(texto);
-    let resultados = [];
+    let resultado = [];
 
-    // Intentar primero patrones específicos
-    let soloNumeros = detectarSoloNumeros(texto);
-    if (soloNumeros.length > 0) {
-      resultados = soloNumeros;
-    } else {
-      const cantidadConPrecio = detectarCantidadConPrecioUnitario(textoNorm);
-      const piezasConPrecio = detectarPiezasConPrecio(textoNorm);
-      const montos = detectarMonto(textoNorm);
-      const cantidades = detectarCantidad(textoNorm);
-      const piezas = detectarPiezas(textoNorm);
-
-      resultados = [
-        ...cantidadConPrecio,
-        ...piezasConPrecio,
-        ...montos,
-        ...cantidades,
-        ...piezas
-      ];
+    // REGLA 1: "90 de salchicha" (UN número + "de" + producto)
+    const reglaUnNumero = /^(\d+(?:\.\d+)?)\s+de\s+([a-záéíóúñ\s]+)$/i;
+    let match = reglaUnNumero.exec(textoNorm);
+    if (match) {
+      const monto = parseFloat(match[1]);
+      const producto = normalizarProducto(match[2]);
+      return {
+        success: true,
+        error: null,
+        data: [{
+          tipo: "monto",
+          producto,
+          cantidad: 1,
+          precioPorUnidad: monto,
+          precioTotal: monto
+        }],
+        preview: `$${monto} de ${producto}`
+      };
     }
 
-    resultados = eliminarDuplicados(resultados);
-    resultados = resultados.map(({ original, ...rest }) => rest);
+    // REGLA 2: "3 de 9" (DOS números - cantidad × precio, sin producto)
+    const reglaDosnumerosSimple = /^(\d+)\s+de\s+(\d+(?:\.\d+)?)$/;
+    match = reglaDosnumerosSimple.exec(textoNorm);
+    if (match) {
+      const cantidad = parseInt(match[1]);
+      const precio = parseFloat(match[2]);
+      return {
+        success: true,
+        error: null,
+        data: [{
+          tipo: "numeros_simples",
+          producto: "",
+          cantidad,
+          precioPorUnidad: precio,
+          precioTotal: cantidad * precio
+        }],
+        preview: `${cantidad} × $${precio} = $${(cantidad * precio).toFixed(2)}`
+      };
+    }
+
+    // REGLA 3: "5 elotes de a 5" (cantidad + producto + "de a" + precio)
+    const reglaProductoDea = /^(\d+)\s+([a-záéíóúñ\s]+?)\s+de\s+a\s+(\d+(?:\.\d+)?)$/i;
+    match = reglaProductoDea.exec(textoNorm);
+    if (match) {
+      const cantidad = parseInt(match[1]);
+      const productoRaw = match[2].trim();
+      const precio = parseFloat(match[3]);
+      const producto = normalizarProducto(productoRaw);
+      
+      return {
+        success: true,
+        error: null,
+        data: [{
+          tipo: "producto_dea",
+          producto,
+          cantidad,
+          precioPorUnidad: precio,
+          precioTotal: cantidad * precio
+        }],
+        preview: `${cantidad} ${producto} × $${precio} = $${(cantidad * precio).toFixed(2)}`
+      };
+    }
+
+    // REGLA 4: "2 litros de leche" (cantidad + unidad + "de" + producto)
+    const reglaConUnidad = /^(\d+(?:\.\d+)?)\s+(kilo|kg|kilogramo|gramo|g|litro|l|lt|mililitro|ml|pieza|pz|docena|dz|lata|latas)\s+de\s+([a-záéíóúñ\s]+)$/i;
+    match = reglaConUnidad.exec(textoNorm);
+    if (match) {
+      const cantidad = parseFloat(match[1]);
+      const unidadRaw = match[2];
+      const productoRaw = match[3].trim();
+      
+      const unidad = normalizarUnidad(unidadRaw);
+      const producto = normalizarProducto(productoRaw);
+      
+      return {
+        success: true,
+        error: null,
+        data: [{
+          tipo: "cantidad_unidad",
+          producto,
+          cantidad,
+          unidad,
+          precioPorUnidad: null,
+          precioTotal: null
+        }],
+        preview: `${cantidad} ${unidad} de ${producto}`
+      };
+    }
+
+    // REGLA 5: "2 litros de leche a 50" (cantidad + unidad + "de" + producto + "a" + precio)
+    const reglaConPrecio = /^(\d+(?:\.\d+)?)\s+(kilo|kg|kilogramo|gramo|g|litro|l|lt|mililitro|ml|pieza|pz|docena|dz|lata|latas)\s+de\s+([a-záéíóúñ\s]+?)\s+a\s+(\d+(?:\.\d+)?)$/i;
+    match = reglaConPrecio.exec(textoNorm);
+    if (match) {
+      const cantidad = parseFloat(match[1]);
+      const unidadRaw = match[2];
+      const productoRaw = match[3].trim();
+      const precio = parseFloat(match[4]);
+      
+      const unidad = normalizarUnidad(unidadRaw);
+      const producto = normalizarProducto(productoRaw);
+      
+      return {
+        success: true,
+        error: null,
+        data: [{
+          tipo: "cantidad_precio",
+          producto,
+          cantidad,
+          unidad,
+          precioPorUnidad: precio,
+          precioTotal: cantidad * precio
+        }],
+        preview: `${cantidad} ${unidad} de ${producto} a $${precio} = $${(cantidad * precio).toFixed(2)}`
+      };
+    }
 
     return {
-      success: true,
-      error: null,
-      data: resultados,
-      cantidad: resultados.length,
-      preview: generarPreview(resultados)
+      success: false,
+      error: "Formato no reconocido",
+      data: []
     };
 
   } catch (error) {
     return {
       success: false,
-      error: `Error al parsear: ${error.message}`,
+      error: error.message,
       data: []
     };
   }
 }
 
 // ======================================
-// 🧹 FUNCIONES AUXILIARES
+// 📝 FORMATEAR PARA VENTA
 // ======================================
-
-function eliminarDuplicados(resultados) {
-  const mapa = new Map();
-
-  resultados.forEach(item => {
-    const clave = `${item.tipo}_${item.producto}_${item.cantidad}`;
-    if (!mapa.has(clave)) {
-      mapa.set(clave, item);
-    }
-  });
-
-  return Array.from(mapa.values());
-}
-
-function generarPreview(resultados) {
-  return resultados.map(item => {
-    switch (item.tipo) {
-      case "cantidad_con_precio":
-        return `${item.cantidad} ${item.unidad} de ${item.producto} a $${item.precioPorUnidad} = $${item.precioTotal.toFixed(2)}`;
-      case "pieza_con_precio":
-        return `${item.cantidad} ${item.producto} a $${item.precioPorUnidad} = $${item.precioTotal.toFixed(2)}`;
-      case "numeros_solo":
-        return `${item.cantidad} × $${item.precioPorUnidad} = $${item.precioTotal.toFixed(2)}`;
-      case "monto":
-        return `$${item.valor} de ${item.producto}`;
-      case "cantidad":
-        return `${item.valor} ${item.unidad} de ${item.producto}`;
-      case "pieza":
-        return `${item.cantidad} ${item.producto}`;
-      default:
-        return JSON.stringify(item);
-    }
-  }).join(" | ");
-}
 
 function formatearParaVenta(resultados) {
   return resultados.map(item => {
     switch (item.tipo) {
-      case "cantidad_con_precio":
+      case "monto":
         return {
-          descripcion: `${item.cantidad} ${item.unidad} de ${item.producto} a $${item.precioPorUnidad}`,
+          descripcion: `$${item.precioTotal} de ${item.producto}`,
           producto: item.producto,
-          cantidad: item.cantidad,
-          unidad: item.unidad,
+          cantidad: 1,
           precioTotal: item.precioTotal,
-          precioPorUnidad: item.precioPorUnidad
+          precioPorUnidad: item.precioTotal
         };
 
-      case "pieza_con_precio":
-        return {
-          descripcion: `${item.cantidad} ${item.producto} a $${item.precioPorUnidad}`,
-          producto: item.producto,
-          cantidad: item.cantidad,
-          precioTotal: item.precioTotal,
-          precioPorUnidad: item.precioPorUnidad
-        };
-
-      case "numeros_solo":
+      case "numeros_simples":
         return {
           descripcion: `${item.cantidad} × $${item.precioPorUnidad}`,
           producto: "",
@@ -406,33 +251,38 @@ function formatearParaVenta(resultados) {
           precioPorUnidad: item.precioPorUnidad
         };
 
-      case "monto":
+      case "producto_dea":
         return {
-          descripcion: `$${item.valor} de ${item.producto}`,
+          descripcion: `${item.cantidad} ${item.producto} a $${item.precioPorUnidad}`,
           producto: item.producto,
-          precioTotal: item.valor,
-          cantidad: 1,
-          precioPorUnidad: item.valor
+          cantidad: item.cantidad,
+          precioTotal: item.precioTotal,
+          precioPorUnidad: item.precioPorUnidad
         };
 
-      case "cantidad":
+      case "cantidad_unidad":
         return {
-          descripcion: `${item.valor} ${item.unidad} de ${item.producto}`,
+          descripcion: `${item.cantidad} ${item.unidad} de ${item.producto}`,
           producto: item.producto,
-          cantidad: item.valor,
-          unidad: item.unidad
+          cantidad: item.cantidad,
+          unidad: item.unidad,
+          precioPorUnidad: null,
+          precioTotal: null
         };
 
-      case "pieza":
+      case "cantidad_precio":
         return {
-          descripcion: `${item.cantidad} ${item.producto}`,
+          descripcion: `${item.cantidad} ${item.unidad} de ${item.producto} a $${item.precioPorUnidad}`,
           producto: item.producto,
-          cantidad: item.cantidad
+          cantidad: item.cantidad,
+          unidad: item.unidad,
+          precioTotal: item.precioTotal,
+          precioPorUnidad: item.precioPorUnidad
         };
     }
   });
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseOrder, formatearParaVenta, normalizarProducto, normalizarUnidad };
+  module.exports = { parseOrder, formatearParaVenta };
 }
