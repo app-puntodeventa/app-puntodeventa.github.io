@@ -11,6 +11,7 @@ const VALID_PINS = {
 let usuarioActual = null;
 let carrito = [];
 let totalVenta = 0;
+let ultimoTotalVenta = 0; // IMPORTANTE: Guardar el total actual
 let datosVentas = {};
 let inventarioLocal = [];
 
@@ -222,12 +223,24 @@ function actualizarPreviewRapido() {
     return;
   }
   
-  const prod = resultado.data[0];
-  if (prod) {
-    const total = prod.precioTotal || (prod.cantidad * (prod.precioPorUnidad || 0));
-    preview.classList.remove("hidden");
-    preview.innerHTML = `<strong>${prod.descripcion}</strong> = <span class="text-green-600 font-bold">$${total.toFixed(2)}</span>`;
+  if (resultado.data.length === 0) {
+    preview.classList.add("hidden");
+    return;
   }
+  
+  let html = "";
+  let total = 0;
+  
+  resultado.data.forEach(prod => {
+    const subtotal = prod.precioTotal || (prod.cantidad * (prod.precioPorUnidad || 0));
+    total += subtotal;
+    html += `<div><strong>${prod.descripcion}</strong> = <span class="text-green-600 font-bold">$${subtotal.toFixed(2)}</span></div>`;
+  });
+  
+  html += `<div class="font-bold mt-2 border-t pt-2">Total: <span class="text-green-600">$${total.toFixed(2)}</span></div>`;
+  
+  preview.classList.remove("hidden");
+  preview.innerHTML = html;
 }
 
 // ========================================
@@ -288,7 +301,6 @@ document.getElementById("btnAgrMan").onclick = () => {
   
   const subtotal = cantidad * precio;
   
-  // Actualizar inventario
   actualizarProductoInventario(nombre, precio, "pieza");
   
   carrito.push({
@@ -324,6 +336,11 @@ document.getElementById("btnAgrRap").onclick = () => {
   
   if (!resultado.success) {
     alert(`❌ ${resultado.error}`);
+    return;
+  }
+  
+  if (resultado.data.length === 0) {
+    alert("❌ No se pudo procesar");
     return;
   }
   
@@ -367,18 +384,18 @@ function renderCarrito() {
   total.textContent = "$" + totalVenta.toFixed(2);
   
   if (carrito.length === 0) {
-    cont.innerHTML = '<p class="text-center text-gray-400 text-sm py-3">Carrito vacío</p>';
+    cont.innerHTML = '<p class="text-center text-gray-400 text-xs sm:text-sm py-3">Carrito vacío</p>';
     return;
   }
   
   cont.innerHTML = carrito.map((item, idx) => `
-    <div class="flex justify-between items-center bg-white p-2 rounded-lg border-l-4 border-blue-400 text-sm">
-      <div class="flex-1">
+    <div class="flex justify-between items-center bg-white p-2 rounded-lg border-l-4 border-blue-400 text-xs sm:text-sm">
+      <div class="flex-1 min-w-0">
         <p class="font-bold truncate">${item.nombre}</p>
         <p class="text-xs text-gray-500">${item.cantidad} × $${item.precio.toFixed(2)}</p>
       </div>
-      <div class="flex items-center gap-2">
-        <span class="font-bold text-green-600 w-16 text-right">$${item.subtotal.toFixed(2)}</span>
+      <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+        <span class="font-bold text-green-600 w-12 sm:w-16 text-right">$${item.subtotal.toFixed(2)}</span>
         <button onclick="eliminarDelCarrito(${idx})" class="text-red-500 hover:bg-red-100 p-1 rounded transition">
           <i class="bi bi-trash"></i>
         </button>
@@ -402,6 +419,9 @@ document.getElementById("btnFinalizarVenta").onclick = () => {
     alert("❌ Carrito vacío");
     return;
   }
+  
+  // GUARDAR EL TOTAL ACTUAL ANTES DE LIMPIAR
+  ultimoTotalVenta = totalVenta;
   
   // Registrar venta
   const venta = {
@@ -431,12 +451,13 @@ document.getElementById("btnFinalizarVenta").onclick = () => {
   
   alert("✅ Venta registrada");
   
-  // Mostrar modal de cambio
+  // Mostrar modal de cambio CON EL TOTAL GUARDADO
   setTimeout(() => {
-    document.getElementById("cambioTotal").textContent = "$" + totalVenta.toFixed(2);
+    document.getElementById("cambioTotal").textContent = "$" + ultimoTotalVenta.toFixed(2);
     document.getElementById("montoPagado").value = "";
     document.getElementById("resultCambio").textContent = "$0.00";
     document.getElementById("modalCambio").showModal();
+    document.getElementById("montoPagado").focus();
   }, 300);
 };
 
@@ -457,23 +478,25 @@ function limpiarCarrito() {
 
 function calcularCambioFuncion() {
   const monto = parseFloat(document.getElementById("montoPagado").value) || 0;
-  const total = parseFloat(document.getElementById("cambioTotal").textContent.replace("$", "")) || 0;
+  const total = ultimoTotalVenta; // USAR EL TOTAL GUARDADO
   const resultado = document.getElementById("resultCambio");
   
   if (monto <= 0) {
     resultado.textContent = "$0.00";
+    resultado.className = "text-2xl sm:text-3xl font-bold text-gray-600";
     return;
   }
   
   if (monto < total) {
-    resultado.textContent = `❌ Faltan $${(total - monto).toFixed(2)}`;
-    resultado.className = "text-3xl font-bold text-red-600";
+    const falta = total - monto;
+    resultado.textContent = `❌ Faltan $${falta.toFixed(2)}`;
+    resultado.className = "text-2xl sm:text-3xl font-bold text-red-600";
     return;
   }
   
   const cambio = monto - total;
   resultado.textContent = "$" + cambio.toFixed(2);
-  resultado.className = "text-3xl font-bold text-green-600";
+  resultado.className = "text-2xl sm:text-3xl font-bold text-green-600";
 }
 
 // ========================================
@@ -488,15 +511,7 @@ function actualizarEstadisticas() {
   document.getElementById("statVentas").textContent = countVentas;
   document.getElementById("statTotal").textContent = "$" + totalVentas.toFixed(2);
   document.getElementById("statIngresos").textContent = "$" + totalVentas.toFixed(2);
-  
-  // Calcular ganancia (si hay costos)
-  let ganancia = 0;
-  ventas.forEach(v => {
-    v.items.forEach(item => {
-      // Aquí agregarías lógica de costo si es necesario
-    });
-  });
-  document.getElementById("statGanancia").textContent = "$" + ganancia.toFixed(2);
+  document.getElementById("statGanancia").textContent = "$0.00";
 }
 
 // ========================================
@@ -508,21 +523,21 @@ function renderHistorial() {
   const ventas = datosVentas[usuarioActual] || [];
   
   if (ventas.length === 0) {
-    cont.innerHTML = '<div class="text-center text-gray-400 py-8"><i class="bi bi-inbox text-5xl mb-3"></i><p>No hay ventas registradas</p></div>';
+    cont.innerHTML = '<div class="text-center text-gray-400 py-8"><i class="bi bi-inbox text-4 sm:text-5xl mb-3"></i><p class="text-sm sm:text-base">No hay ventas registradas</p></div>';
     return;
   }
   
   cont.innerHTML = ventas.reverse().map(v => `
-    <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-green-500 animate-in">
+    <div class="bg-white rounded-lg shadow-md p-3 sm:p-4 border-l-4 border-green-500 animate-in">
       <div class="flex justify-between items-start mb-3">
         <div>
-          <p class="font-bold text-gray-800">🧾 Venta</p>
+          <p class="font-bold text-gray-800 text-sm sm:text-base">🧾 Venta</p>
           <p class="text-xs text-gray-500">${v.fecha}</p>
         </div>
-        <span class="text-sm bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold">${v.items.length} items</span>
+        <span class="text-xs sm:text-sm bg-green-100 text-green-800 px-2 sm:px-3 py-1 rounded-full font-bold">${v.items.length} items</span>
       </div>
       
-      <div class="bg-gray-50 rounded p-2 mb-3 max-h-32 overflow-y-auto text-sm space-y-1">
+      <div class="bg-gray-50 rounded p-2 mb-3 max-h-32 overflow-y-auto text-xs sm:text-sm space-y-1">
         ${v.items.map(item => `
           <div class="flex justify-between">
             <span>${item.cantidad}× ${item.nombre}</span>
@@ -531,19 +546,19 @@ function renderHistorial() {
         `).join("")}
       </div>
       
-      <div class="flex justify-between items-center">
-        <span class="font-bold text-lg">Total:</span>
-        <span class="text-2xl font-bold text-green-600">$${v.total.toFixed(2)}</span>
+      <div class="flex justify-between items-center mb-3">
+        <span class="font-bold text-sm sm:text-base">Total:</span>
+        <span class="text-xl sm:text-2xl font-bold text-green-600">$${v.total.toFixed(2)}</span>
       </div>
       
-      <div class="flex gap-2 mt-3">
-        <button onclick="descargarTicket(${v.id})" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded font-bold text-sm transition">
+      <div class="flex gap-2 flex-wrap">
+        <button onclick="descargarTicket(${v.id})" class="flex-1 min-w-20 bg-blue-600 hover:bg-blue-700 text-white px-2 sm:px-3 py-2 rounded font-bold text-xs sm:text-sm transition">
           📄 Ticket
         </button>
-        <button onclick="generarQRVenta(${v.id})" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded font-bold text-sm transition">
+        <button onclick="generarQRVenta(${v.id})" class="flex-1 min-w-20 bg-purple-600 hover:bg-purple-700 text-white px-2 sm:px-3 py-2 rounded font-bold text-xs sm:text-sm transition">
           📱 QR
         </button>
-        <button onclick="eliminarVenta('${usuarioActual}', ${v.id})" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded font-bold text-sm transition">
+        <button onclick="eliminarVenta('${usuarioActual}', ${v.id})" class="flex-1 min-w-20 bg-red-600 hover:bg-red-700 text-white px-2 sm:px-3 py-2 rounded font-bold text-xs sm:text-sm transition">
           🗑️ Eliminar
         </button>
       </div>
@@ -565,8 +580,8 @@ function descargarTicket(ventaId) {
   if (!venta) return;
   
   const html = `
-    <div style="text-align:center; font-family:Arial; width:300px; margin:0 auto;">
-      <h2>🧾 TICKET DE VENTA</h2>
+    <div style="text-align:center; font-family:Arial; width:300px; margin:0 auto; padding:20px;">
+      <h2 style="margin:0">🧾 TICKET DE VENTA</h2>
       <p>Usuario: ${venta.usuario}</p>
       <p>Fecha: ${venta.fecha}</p>
       <hr>
@@ -601,15 +616,15 @@ function generarQRVenta(ventaId) {
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(datos)}`;
   
   const modal = document.createElement("div");
-  modal.className = "fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4";
+  modal.className = "fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 overflow-y-auto";
   modal.innerHTML = `
-    <div class="bg-white rounded-xl p-6 max-w-sm w-full shadow-2xl">
-      <h2 class="text-2xl font-bold text-center mb-4">📱 QR Venta</h2>
+    <div class="bg-white rounded-xl p-4 sm:p-6 max-w-sm w-full shadow-2xl my-auto">
+      <h2 class="text-xl sm:text-2xl font-bold text-center mb-4">📱 QR Venta</h2>
       <img src="${qrUrl}" class="w-full mb-4 p-4 bg-gray-50 rounded-lg">
       <p class="text-center text-gray-600 mb-4">Total: <strong>$${venta.total.toFixed(2)}</strong></p>
       <div class="flex gap-2">
-        <button onclick="this.closest('.fixed').remove()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 rounded-lg transition">Cerrar</button>
-        <a href="${qrUrl}" download="qr-${ventaId}.png" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg transition text-center">Descargar</a>
+        <button onclick="this.closest('.fixed').remove()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 rounded-lg transition text-sm">Cerrar</button>
+        <a href="${qrUrl}" download="qr-${ventaId}.png" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg transition text-center text-sm">Descargar</a>
       </div>
     </div>
   `;
@@ -634,7 +649,8 @@ document.querySelectorAll(".tabVenta").forEach(btn => {
     btn.classList.add("border-blue-500", "text-blue-600");
     btn.classList.remove("border-transparent", "text-gray-600");
     
-    document.getElementById("tab" + btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1)).classList.remove("hidden");
+    const tabName = btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1);
+    document.getElementById("tab" + tabName).classList.remove("hidden");
   };
 });
 
@@ -645,7 +661,9 @@ document.querySelectorAll(".tabVenta").forEach(btn => {
 document.getElementById("btnNuevaVenta").onclick = () => {
   limpiarCarrito();
   document.getElementById("modalVenta").showModal();
-  document.getElementById("selectProd").focus();
+  setTimeout(() => {
+    document.getElementById("selectProd").focus();
+  }, 100);
 };
 
 // ========================================
