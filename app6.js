@@ -202,6 +202,7 @@ function init() {
   actualizarTotalDia();
   actualizarSelectProductos();
   actualizarGanancias();
+  agregarBotonGananciasDetalle();
 }
 
 function actualizarSelectProductos() {
@@ -384,7 +385,7 @@ function actualizarPreviewLibre() {
 }
 
 // ======================================
-// 🧪 PARSER INTELIGENTE - MODO BETA
+// 🧪 PARSER INTELIGENTE AVANZADO - MODO BETA
 // ======================================
 
 function parserBeta(texto) {
@@ -392,13 +393,13 @@ function parserBeta(texto) {
 
   let t = texto.toLowerCase().trim();
   
-  // Patrones regex avanzados
+  // Patrones regex MEJORADOS con mayor flexibilidad
   const patrones = [
-    // Patrón 1: "3kg huevo a 20" → cantidad=3, unidad=kg, producto=huevo, precio=20
-    /^(\d+(?:\.\d+)?)\s*(kg|g|l|litro|litros|pieza|pz|piezas|metro|m|docena|doc|pack|caja|bolsa|lata|bolsas|cajas|latas)?\s+(.+?)\s+a\s+(\d+(?:\.\d+)?)$/i,
+    // Patrón 1: "3kg huevo a 20" o "3 kg huevo 20" o "3kg de huevo a $20"
+    /^(\d+(?:\.\d+)?)\s*(kg|gramo|g|litro|l|pieza|pz|piezas|metro|m|docena|doc|pack|caja|bolsa|lata|bolsas|cajas|latas|kilo|kilos)?\s+(?:de\s+)?(.+?)\s+(?:a\s+)?(?:\$)?(\d+(?:\.\d+)?)$/i,
     
-    // Patrón 2: "huevo 20" → cantidad implícita=1, producto=huevo, precio=20
-    /^(.+?)\s+(\d+(?:\.\d+)?)$/i
+    // Patrón 2: "huevo a 25" o "huevo 25" o "huevo $25"
+    /^(.+?)\s+(?:a\s+)?(?:\$)?(\d+(?:\.\d+)?)$/i
   ];
 
   for (let patron of patrones) {
@@ -406,11 +407,17 @@ function parserBeta(texto) {
     
     if (match) {
       if (match.length === 5) {
-        // Patrón 1 (completo)
+        // Patrón 1 (completo): cantidad, unidad, producto, precio
         const cantidad = parseFloat(match[1]);
-        const unidad = (match[2] || "pieza").toLowerCase();
+        let unidad = (match[2] || "pieza").toLowerCase();
         const producto = match[3].trim();
         const precio = parseFloat(match[4]);
+
+        // Normalizar unidades
+        if (unidad.includes("kilo")) unidad = "kg";
+        if (unidad.includes("gramo")) unidad = "g";
+        if (unidad.includes("litro")) unidad = "l";
+        if (unidad.includes("metro")) unidad = "m";
 
         return { cantidad, unidad, producto, precio, esValido: true };
       } 
@@ -449,9 +456,23 @@ if (inputBeta) {
     const unidadLabel = unidad === "pieza" ? "" : ` ${unidad}`;
 
     previewBeta.innerHTML = `
-      <div class="flex justify-between items-center">
-        <span>⚡ ${cantidad}${unidadLabel} ${producto} @ $${precio}</span>
-        <span class="font-bold text-green-600">$${subtotal.toFixed(2)}</span>
+      <div class="space-y-1">
+        <div class="flex justify-between text-sm">
+          <span class="text-gray-600">Producto:</span>
+          <span class="font-bold">${producto.toUpperCase()}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-gray-600">Cantidad:</span>
+          <span class="font-bold">${cantidad}${unidadLabel}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-gray-600">Precio unitario:</span>
+          <span class="font-bold">$${precio.toFixed(2)}</span>
+        </div>
+        <div class="flex justify-between border-t pt-1">
+          <span class="text-gray-600 font-bold">Total:</span>
+          <span class="font-bold text-green-600 text-lg">$${subtotal.toFixed(2)}</span>
+        </div>
       </div>
     `;
   });
@@ -589,7 +610,7 @@ if (btnAgregarBeta) {
     const resultado = parserBeta(inputBeta.value);
 
     if (!resultado || !resultado.esValido) {
-      alert(`❌ ${resultado?.error || "Formato no reconocido"}\n\nEjemplos válidos:\n• 3kg huevo a 20\n• 2 leches 15\n• huevo 25`);
+      alert(`❌ ${resultado?.error || "Formato no reconocido"}\n\nEjemplos válidos:\n• 3kg huevo a 20\n• 2 leches 15\n• huevo 25\n• 1.5l jugo a 10`);
       return;
     }
 
@@ -1300,6 +1321,34 @@ function actualizarGanancias() {
   if (elIngresos) elIngresos.textContent = `$${ingresos.toFixed(2)}`;
   if (elGanancia) elGanancia.textContent = `$${ganancia.toFixed(2)}`;
   if (elVentas) elVentas.textContent = ventasCount;
+}
+
+// ======================================
+// 📊 BOTÓN GANANCIAS DETALLADAS
+// ======================================
+
+function agregarBotonGananciasDetalle() {
+  if (usuarioActual !== "ADMIN") return;
+
+  const panel = document.getElementById("panelGanancias");
+  if (!panel) return;
+
+  // Verificar que no exista ya
+  if (panel.querySelector("#btnGananciasDetalle")) return;
+
+  const btnContainer = document.createElement("div");
+  btnContainer.className = "col-span-2 flex justify-center mt-3";
+  btnContainer.id = "btnGananciasDetalle";
+
+  const btn = document.createElement("button");
+  btn.className = "bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded font-bold transition flex items-center gap-2";
+  btn.innerHTML = '<i class="bi bi-graph-up"></i> Ver análisis detallado';
+  btn.onclick = () => {
+    window.location.href = "ganancias.html";
+  };
+
+  btnContainer.appendChild(btn);
+  panel.appendChild(btnContainer);
 }
 
 // ======================================
