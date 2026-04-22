@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>POS Tienda</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- 🔧 jsPDF - CORRECTO -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- 📸 html2canvas -->
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+<!-- 🎨 Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#111827">
+
+<style>
+  /* Estilos para modal de licencia */
+  #licenseModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+
+  #licenseModal.active {
+    display: flex;
+  }
+
+  #licenseModalContent {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  }
+
+  .bloqueado {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+</style>
+  
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+<!-- MODAL DE LICENCIA -->
+<div id="licenseModal">
+  <div id="licenseModalContent">
+    <h2 class="font-bold text-2xl mb-4 text-red-600">⚠️ Versión Demo</h2>
+    <p class="text-gray-700 mb-4">Has alcanzado el límite de <strong>3 ventas</strong> en versión demo.</p>
+    
+    <div class="bg-yellow-100 p-3 rounded mb-4 border-l-4 border-yellow-500">
+      <p class="text-sm text-gray-800">Para desbloquear el programa completo, ingresa tu código de licencia.</p>
+    </div>
+
+    <input id="licenseInput" 
+      type="password" 
+      class="border-2 border-gray-300 p-3 w-full rounded mb-3 text-center font-mono" 
+      placeholder="Código de licencia"
+      autocomplete="off">
+
+    <button id="btnValidarLicencia" 
+      class="bg-green-600 hover:bg-green-700 text-white w-full py-3 rounded font-bold transition">
+      🔓 Desbloquear
+    </button>
+
+    <p class="text-xs text-gray-500 mt-3">¿No tienes código? Contacta al soporte</p>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="loginScreen" class="fixed inset-0 bg-black flex items-center justify-center z-50">
+  <div class="bg-white p-6 rounded-xl w-72 text-center">
+    <h2 class="font-bold mb-3">Acceso</h2>
+
+   <div class="relative">
+  <input id="pinInput"
+    type="password"
+    class="border p-2 w-full text-center pr-10"
+    placeholder="PIN">
+
+  <button id="togglePin"
+    type="button"
+    class="absolute right-2 top-2 text-gray-500">
+    <i class="bi bi-eye"></i>
+  </button>
+</div>
+
+    <button id="btnLogin"
+      class="bg-blue-600 text-white w-full mt-3 py-2 rounded">
+      Entrar
+    </button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header class="flex justify-between items-center bg-blue-600 text-white p-3 shadow">
+
+  <div class="font-bold text-lg">
+    APP Punto de venta
+  </div>
+
+  <div id="userLabel" class="text-sm opacity-90">
+    Sin sesión
+  </div>
+
+  <div class="flex gap-2">
+    <button id="btnInstall" class="bg-white text-blue-600 px-3 py-1 rounded text-sm">
+      Instalar
+    </button>
+
+    <button id="btnLogout" class="bg-red-500 px-3 py-1 rounded text-sm">
+      Salir
+    </button>
+  </div>
+
+</header>
+
+  
+<div class="p-4 flex gap-2">
+  <button id="btnNuevaVenta"
+    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition">
+    ✅ Nueva venta
+  </button>
+
+  <a href="inventario.html"
+    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition">
+    📦 Inventario
+  </a>
+</div>
+
+<!-- VENTAS -->
+<div id="listaVentas" class="p-4 grid gap-4"></div>
+
+<div id="panelGanancias" class="p-4 bg-white shadow rounded m-4 hidden">
+  <h2 class="font-bold text-lg mb-2">💰 Ganancias del día</h2>
+
+  <div class="grid grid-cols-2 gap-3 text-sm">
+    <div class="bg-gray-100 p-2 rounded">
+      <p class="text-gray-500">Ingresos</p>
+      <p id="gananciaIngresos" class="font-bold">$0</p>
+    </div>
+
+    <div class="bg-gray-100 p-2 rounded">
+      <p class="text-gray-500">Ganancia</p>
+      <p id="gananciaTotal" class="font-bold text-green-600">$0</p>
+    </div>
+
+    <div class="bg-gray-100 p-2 rounded col-span-2">
+      <p class="text-gray-500">Ventas</p>
+      <p id="gananciaVentas" class="font-bold">0</p>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="p-4 bg-white shadow-inner flex flex-col gap-3">
+  <div class="flex justify-between items-center">
+    <div>
+      <p class="text-sm text-gray-500">Total del día</p>
+      <p id="totalDia" class="text-xl font-bold text-blue-600">$0</p>
+    </div>
+  </div>
+
+  <div class="flex gap-2">
+    <button id="btnPDF"
+      class="bg-black text-white px-4 py-2 rounded text-sm hover:bg-gray-800 transition">
+      📄 PDF Usuario
+    </button>
+
+    <button id="btnPDFGlobal"
+      class="bg-red-600 text-white px-4 py-2 rounded text-sm font-bold shadow-lg hover:bg-red-700 transition"
+      style="display:none;">
+      📊 PDF Global
+    </button>
+  </div>
+</div>
+
+<!-- MODAL -->
+<dialog id="modal" class="p-6 rounded-xl w-full max-w-2xl relative">
+
+  <button id="btnCerrar" class="absolute right-3 top-2 text-2xl">✕</button>
+
+  <h2 class="font-bold mb-4 text-xl">🧾 Nueva Venta</h2>
+
+  <!-- TABS / MODOS -->
+  <div class="flex gap-2 mb-4 border-b overflow-x-auto">
+    <button id="tabCatalogo" class="px-4 py-2 border-b-2 border-blue-600 font-bold text-blue-600 whitespace-nowrap">
+      📦 Catálogo
+    </button>
+    <button id="tabLibre" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-800 whitespace-nowrap">
+      ✍️ Escribir
+    </button>
+    <button id="tabBeta" class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-800 whitespace-nowrap">
+      🧪 Beta (Rápido)
+    </button>
+  </div>
+
+  <!-- MODO CATÁLOGO -->
+  <div id="modoCatalogo" class="hidden">
+    <label class="block text-sm font-bold mb-2">📦 Selecciona un producto</label>
+    <select id="selectProducto" class="border p-2 w-full rounded mb-3">
+      <option value="">-- Selecciona --</option>
+    </select>
+
+    <label class="block text-sm font-bold mb-2">🔢 Cantidad</label>
+    <input id="inputCantidad" type="number" min="1" value="1" class="border p-2 w-full rounded mb-3">
+
+    <p id="previewCatalogo" class="text-blue-500 text-sm mt-2 p-2 bg-blue-50 rounded"></p>
+
+    <button id="btnAgregarCatalogo" class="bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded mt-3 transition">
+      ➕ Agregar
+    </button>
+  </div>
+
+  <!-- MODO LIBRE -->
+  <div id="modoLibre" class="hidden">
+    <label class="block text-sm font-bold mb-2">📝 Producto (ej: huevo, pan)</label>
+    <input id="inputNombreLibre" type="text" class="border p-2 w-full rounded mb-3" placeholder="Nombre del producto">
+
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <div>
+        <label class="block text-sm font-bold mb-1">📊 Cantidad</label>
+        <input id="inputCantidadLibre" type="number" min="1" value="1" class="border p-2 w-full rounded">
+      </div>
+      <div>
+        <label class="block text-sm font-bold mb-1">💰 Precio</label>
+        <input id="inputPrecioLibre" type="number" min="0" step="0.01" class="border p-2 w-full rounded">
+      </div>
+    </div>
+
+    <p id="previewLibre" class="text-blue-500 text-sm mt-2 p-2 bg-blue-50 rounded"></p>
+
+    <button id="btnAgregarLibre" class="bg-green-600 hover:bg-green-700 text-white w-full py-2 rounded mt-3 transition">
+      ✨ Agregar Nuevo
+    </button>
+  </div>
+
+  <!-- MODO BETA -->
+  <div id="modoBeta" class="hidden">
+    <label class="block text-sm font-bold mb-2">⚡ Modo Rápido (Inteligente)</label>
+    <p class="text-xs text-gray-500 mb-3">Ejemplos: <code class="bg-gray-100 px-2 py-1 rounded">40 pesos de salchicha</code> | <code class="bg-gray-100 px-2 py-1 rounded">3 hojas por 1 peso</code> | <code class="bg-gray-100 px-2 py-1 rounded">3 peluches por 35</code></p>
+    
+    <input id="inputBeta" 
+      type="text" 
+      class="border p-2 w-full rounded mb-3" 
+      placeholder="cantidad unidad producto precio"
+      autocomplete="off">
+    
+    <p id="previewBeta" class="text-green-500 text-sm mt-2 p-2 bg-green-50 rounded"></p>
+    
+    <button id="btnAgregarBeta" class="bg-purple-600 hover:bg-purple-700 text-white w-full py-2 rounded mt-3 transition">
+      ⚡ Agregar Rápido
+    </button>
+  </div>
+
+  <!-- CARRITO -->
+  <div class="mt-4 border-t pt-4">
+    <h3 class="font-bold mb-2">🛒 Carrito</h3>
+    <div id="preVenta" class="space-y-2 max-h-40 overflow-y-auto mb-3"></div>
+    <p class="mt-3 font-bold text-lg">Total: <span id="totalVenta" class="text-green-600">$0</span></p>
+  </div>
+
+  <button id="btnFinalizar"
+    class="bg-red-500 hover:bg-red-600 text-white w-full mt-4 py-2 rounded font-bold transition">
+    ✅ Finalizar venta
+  </button>
+
+</dialog>
+
+<script src="app5.js"></script>
+
+</body>
+</html>
