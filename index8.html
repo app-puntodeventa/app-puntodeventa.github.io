@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>POS Pro - Sistema de Ventas</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#111827">
+
+<style>
+  * {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  #licenseModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+
+  #licenseModal.active {
+    display: flex;
+  }
+
+  #licenseModalContent {
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  }
+
+  #loginScreen {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .login-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    padding: 2.5rem 1.5rem;
+    width: 100%;
+    max-width: 380px;
+  }
+
+  .login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .login-header i {
+    font-size: 3rem;
+    color: #667eea;
+    margin-bottom: 0.5rem;
+  }
+
+  .login-header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+  }
+
+  .login-header p {
+    color: #6b7280;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .pin-input-group {
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+
+  .pin-input {
+    width: 100%;
+    padding: 14px 44px 14px 14px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+
+  .pin-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  .pin-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: color 0.2s;
+  }
+
+  .pin-toggle:hover {
+    color: #667eea;
+  }
+
+  .login-btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+  }
+
+  .login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+  }
+
+  .login-btn:active {
+    transform: translateY(0);
+  }
+
+  .login-footer {
+    text-align: center;
+    color: #9ca3af;
+    font-size: 0.85rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .demo-hint {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: #92400e;
+    margin-top: 1rem;
+    display: none;
+  }
+
+  .demo-hint.show {
+    display: block;
+  }
+</style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+<!-- MODAL DE LICENCIA -->
+<div id="licenseModal">
+  <div id="licenseModalContent">
+    <h2 class="font-bold text-2xl mb-4 text-red-600">⚠️ Versión Demo Limitada</h2>
+    <p class="text-gray-700 mb-4">Has alcanzado el límite de <strong>3 ventas</strong> en la versión demo.</p>
+    
+    <div class="bg-yellow-100 p-4 rounded mb-4 border-l-4 border-yellow-500">
+      <p class="text-sm text-gray-800"><strong>🔓 Desbloquea acceso ilimitado</strong> ingresando tu código de licencia.</p>
+    </div>
+
+    <input id="licenseInput" 
+      type="password" 
+      class="border-2 border-gray-300 p-3 w-full rounded mb-3 text-center font-mono text-lg" 
+      placeholder="Código de licencia"
+      autocomplete="off">
+
+    <button id="btnValidarLicencia" 
+      class="bg-green-600 hover:bg-green-700 text-white w-full py-3 rounded font-bold transition mb-2">
+      🔓 Desbloquear Ahora
+    </button>
+
+    <p class="text-xs text-gray-500">¿No tienes código? Contacta para obtenerlo</p>
+  </div>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="fixed inset-0 flex items-center justify-center z-50 min-h-screen">
+  <div class="login-card">
+    <div class="login-header">
+      <i class="bi bi-cash-register"></i>
+      <h1>POS Pro</h1>
+      <p>Sistema Inteligente de Ventas</p>
+    </div>
+
+    <div class="pin-input-group">
+      <input id="pinInput"
+        type="password"
+        class="pin-input"
+        placeholder="••••"
+        maxlength="4"
+        inputmode="numeric">
+      <button id="togglePin" type="button" class="pin-toggle">
+        <i class="bi bi-eye"></i>
+      </button>
+    </div>
+
+    <button id="btnLogin" class="login-btn">
+      Ingresar
+    </button>
+
+    <div id="demoHint" class="demo-hint">
+      📌 Demo: Usa PIN <code>4829</code>
+    </div>
+
+    <div class="login-footer">
+      <p>© 2024 POS Pro - Sistema Profesional</p>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 shadow-lg">
+  <div class="flex justify-between items-center max-w-full">
+    <div class="font-bold text-lg flex items-center gap-2">
+      <i class="bi bi-cash-register"></i>
+      POS Pro
+    </div>
+
+    <div id="userLabel" class="text-sm opacity-90">
+      Sin sesión
+    </div>
+
+    <div class="flex gap-2">
+      <button id="btnInstall" class="bg-white text-blue-600 px-3 py-1 rounded text-sm font-bold hidden">
+        📱 Instalar
+      </button>
+
+      <button id="btnLogout" class="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm font-bold transition">
+        Salir
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN NAV -->
+<div class="bg-white p-3 shadow-md flex gap-2 flex-wrap">
+  <button id="btnNuevaVenta"
+    class="bg-gradient-to-r from-green-500 to-green-600 hover:shadow-lg text-white px-4 py-2 rounded font-bold transition flex items-center gap-2">
+    <i class="bi bi-plus-circle"></i> Nueva Venta
+  </button>
+
+  <a href="inventario.html"
+    class="bg-gradient-to-r from-blue-500 to-blue-600 hover:shadow-lg text-white px-4 py-2 rounded font-bold transition flex items-center gap-2">
+    <i class="bi bi-box2"></i> Inventario
+  </a>
+</div>
+
+<!-- VENTAS LIST -->
+<div id="listaVentas" class="p-4 grid gap-4 flex-1"></div>
+
+<!-- PANEL DE GANANCIAS -->
+<div id="panelGanancias" class="p-4 bg-white shadow-lg rounded-lg m-4 hidden">
+  <h2 class="font-bold text-lg mb-3 flex items-center gap-2">
+    <i class="bi bi-graph-up"></i> Resumen del Día
+  </h2>
+
+  <div class="grid grid-cols-3 gap-2 text-sm mb-4">
+    <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+      <p class="text-gray-600 text-xs">Ingresos</p>
+      <p id="gananciaIngresos" class="font-bold text-lg">$0</p>
+    </div>
+
+    <div class="bg-purple-50 p-3 rounded border-l-4 border-purple-500">
+      <p class="text-gray-600 text-xs">Ganancia</p>
+      <p id="gananciaTotal" class="font-bold text-lg text-green-600">$0</p>
+    </div>
+
+    <div class="bg-green-50 p-3 rounded border-l-4 border-green-500">
+      <p class="text-gray-600 text-xs">Ventas</p>
+      <p id="gananciaVentas" class="font-bold text-lg">0</p>
+    </div>
+  </div>
+
+  <button id="btnGananciasDetalladas" class="bg-purple-600 hover:bg-purple-700 text-white w-full py-2 rounded font-bold transition flex items-center justify-center gap-2">
+    <i class="bi bi-bar-chart"></i> Ver Análisis Detallado
+  </button>
+</div>
+
+<!-- FOOTER -->
+<div class="bg-white shadow-lg p-4 border-t border-gray-200">
+  <div class="flex justify-between items-center mb-3">
+    <div>
+      <p class="text-sm text-gray-600">Total del día</p>
+      <p id="totalDia" class="text-2xl font-bold text-blue-600">$0</p>
+    </div>
+  </div>
+
+  <div class="flex gap-2 flex-wrap">
+    <button id="btnPDF"
+      class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded font-bold transition flex items-center gap-1">
+      <i class="bi bi-file-pdf"></i> PDF
+    </button>
+
+    <button id="btnPDFGlobal"
+      class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-bold transition flex items-center gap-1"
+      style="display:none;">
+      <i class="bi bi-file-earmark-pdf"></i> Reporte Global
+    </button>
+  </div>
+</div>
+
+<!-- MODAL DE VENTA -->
+<dialog id="modal" class="p-0 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden">
+  <div class="h-full flex flex-col">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex justify-between items-center">
+      <h2 class="font-bold text-lg flex items-center gap-2">
+        <i class="bi bi-receipt"></i> Nueva Venta
+      </h2>
+      <button id="btnCerrar" class="text-2xl hover:opacity-75">✕</button>
+    </div>
+
+    <!-- Content -->
+    <div class="flex-1 overflow-y-auto p-4">
+      <!-- TABS -->
+      <div class="flex gap-2 mb-4 border-b border-gray-200 pb-2">
+        <button id="tabCatalogo" class="px-3 py-2 font-bold text-blue-600 border-b-2 border-blue-600 whitespace-nowrap">
+          <i class="bi bi-box"></i> Catálogo
+        </button>
+        <button id="tabLibre" class="px-3 py-2 text-gray-600 hover:text-gray-800 whitespace-nowrap">
+          <i class="bi bi-pencil"></i> Manual
+        </button>
+        <button id="tabBeta" class="px-3 py-2 text-gray-600 hover:text-gray-800 whitespace-nowrap">
+          <i class="bi bi-sparkles"></i> IA Rápido
+        </button>
+      </div>
+
+      <!-- MODO CATÁLOGO -->
+      <div id="modoCatalogo">
+        <label class="block text-sm font-bold mb-2">📦 Producto</label>
+        <input id="searchProducto" type="text" class="border-2 p-2 w-full rounded mb-2" placeholder="Buscar producto..." autocomplete="off">
+        <select id="selectProducto" class="border-2 p-2 w-full rounded mb-3">
+          <option value="">-- Selecciona --</option>
+        </select>
+
+        <label class="block text-sm font-bold mb-2">🔢 Cantidad</label>
+        <input id="inputCantidad" type="number" min="1" value="1" class="border-2 p-2 w-full rounded mb-3">
+
+        <p id="previewCatalogo" class="text-blue-600 text-sm p-2 bg-blue-50 rounded mb-3"></p>
+
+        <button id="btnAgregarCatalogo" class="bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded font-bold transition">
+          ➕ Agregar
+        </button>
+      </div>
+
+      <!-- MODO LIBRE -->
+      <div id="modoLibre" class="hidden">
+        <label class="block text-sm font-bold mb-2">📝 Nombre</label>
+        <input id="inputNombreLibre" type="text" class="border-2 p-2 w-full rounded mb-3" placeholder="Ej: Huevo, Pan, etc">
+
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          <div>
+            <label class="block text-sm font-bold mb-1">📊 Cantidad</label>
+            <input id="inputCantidadLibre" type="number" min="1" value="1" class="border-2 p-2 w-full rounded">
+          </div>
+          <div>
+            <label class="block text-sm font-bold mb-1">💰 Precio</label>
+            <input id="inputPrecioLibre" type="number" min="0" step="0.01" class="border-2 p-2 w-full rounded">
+          </div>
+        </div>
+
+        <p id="previewLibre" class="text-blue-600 text-sm p-2 bg-blue-50 rounded mb-3"></p>
+
+        <button id="btnAgregarLibre" class="bg-green-600 hover:bg-green-700 text-white w-full py-2 rounded font-bold transition">
+          ✨ Agregar
+        </button>
+      </div>
+
+      <!-- MODO BETA (IA) -->
+      <div id="modoBeta" class="hidden">
+        <label class="block text-sm font-bold mb-2">⚡ Descripción Inteligente</label>
+        <p class="text-xs text-gray-600 mb-3 bg-yellow-50 p-2 rounded">
+          Escribe como hablarías: "3 huevos por 50 pesos", "2 panes a 5 c/u", "40 pesos de salchicha", etc.
+        </p>
+        
+        <input id="inputBeta" type="text" class="border-2 p-2 w-full rounded mb-3" placeholder="Describe el producto y precio..." autocomplete="off">
+        
+        <p id="previewBeta" class="text-green-600 text-sm p-3 bg-green-50 rounded mb-3 hidden"></p>
+        
+        <button id="btnAgregarBeta" class="bg-purple-600 hover:bg-purple-700 text-white w-full py-2 rounded font-bold transition">
+          ⚡ Agregar
+        </button>
+      </div>
+
+      <!-- CARRITO -->
+      <div class="mt-4 border-t pt-4">
+        <h3 class="font-bold mb-2">🛒 Carrito</h3>
+        <div id="preVenta" class="space-y-2 max-h-40 overflow-y-auto mb-3"></div>
+        <p class="text-lg font-bold">Total: <span id="totalVenta" class="text-green-600">$0</span></p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="bg-gray-100 p-4 border-t">
+      <button id="btnFinalizar"
+        class="bg-red-500 hover:bg-red-600 text-white w-full py-3 rounded font-bold transition flex items-center justify-center gap-2">
+        <i class="bi bi-check-circle"></i> Finalizar Venta
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<script src="app5.js"></script>
+
+</body>
+</html>
