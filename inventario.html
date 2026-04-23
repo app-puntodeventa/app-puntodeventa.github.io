@@ -14,40 +14,18 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   }
 
-  /* =========================
-     ✅ FIX RESPONSIVE SIN ROMPER JS
-     ========================= */
-
   .table-responsive {
-    width: 100%;
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
   }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  /* 🔥 SOLO SCROLL, NO CAMBIO ESTRUCTURA */
-  @media (max-width: 768px) {
-    table {
-      min-width: 900px;
-    }
-
-    th, td {
-      white-space: nowrap;
-      font-size: 12px;
-    }
-  }
-
-  /* =========================
-     TU CSS ORIGINAL (INTACTO)
-     ========================= */
 
   .edit-mode input, .edit-mode select {
     background: #fef3c7;
     border: 2px solid #f59e0b;
+  }
+
+  .edit-mode input:focus, .edit-mode select:focus {
+    outline: none;
+    border-color: #d97706;
   }
 
   .badge {
@@ -84,46 +62,41 @@
     <div class="font-bold text-lg flex items-center gap-2">
       <i class="bi bi-box2"></i> Inventario
     </div>
-
-    <a href="index.html" class="bg-white text-blue-600 px-4 py-2 rounded font-bold">
+    <a href="index.html" class="bg-white text-blue-600 px-4 py-2 rounded font-bold hover:shadow-lg transition">
       ← Volver
     </a>
   </div>
 </header>
 
-<!-- BÚSQUEDA Y FILTROS (NO TOCAR) -->
+<!-- BÚSQUEDA Y FILTROS -->
 <div class="bg-white shadow p-4 border-b border-gray-200">
   <div class="flex gap-2 flex-wrap mb-3">
-    <input id="searchInventario"
-      type="text"
-      placeholder="🔍 Buscar producto..."
+    <input id="searchInventario" 
+      type="text" 
+      placeholder="🔍 Buscar producto..." 
       class="flex-1 min-w-60 border-2 p-2 rounded font-bold">
-
-    <button id="btnNuevoProducto"
-      class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-bold">
-      Nuevo
+    
+    <button id="btnNuevoProducto" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-bold transition flex items-center gap-1">
+      <i class="bi bi-plus-circle"></i> Nuevo
     </button>
   </div>
 
   <div class="flex gap-2 flex-wrap text-sm">
-    <button id="filterTodos" class="px-3 py-1 bg-blue-100 text-blue-700 rounded">
-      Todos
+    <button id="filterTodos" class="px-3 py-1 bg-blue-100 text-blue-700 rounded font-bold">
+      Todos (0)
     </button>
-
-    <button id="filterBajoStock" class="px-3 py-1 bg-red-100 text-red-700 rounded">
+    <button id="filterBajoStock" class="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition">
       Bajo Stock
     </button>
-
-    <button id="filterSinCosto" class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded">
+    <button id="filterSinCosto" class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition">
       Sin Costo
     </button>
   </div>
 </div>
 
-<!-- TABLA (NO CAMBIADA) -->
+<!-- TABLA -->
 <div class="p-4 flex-1">
   <div class="table-responsive bg-white rounded-lg shadow overflow-hidden">
-
     <table class="w-full text-sm">
       <thead class="bg-gray-100 border-b-2 border-gray-300">
         <tr>
@@ -135,7 +108,6 @@
           <th class="px-4 py-3 text-center font-bold">Acciones</th>
         </tr>
       </thead>
-
       <tbody id="tablaInventario">
         <tr>
           <td colspan="6" class="text-center p-4 text-gray-400">
@@ -144,36 +116,128 @@
         </tr>
       </tbody>
     </table>
+  </div>
 
+  <!-- STATS -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+    <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+      <p class="text-xs text-gray-600">Total Productos</p>
+      <p id="statTotal" class="text-2xl font-bold">0</p>
+    </div>
+    <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500">
+      <p class="text-xs text-gray-600">Bajo Stock</p>
+      <p id="statBajo" class="text-2xl font-bold text-red-600">0</p>
+    </div>
+    <div class="bg-purple-50 p-3 rounded border-l-4 border-purple-500">
+      <p class="text-xs text-gray-600">Sin Costo</p>
+      <p id="statSinCosto" class="text-2xl font-bold text-yellow-600">0</p>
+    </div>
+    <div class="bg-green-50 p-3 rounded border-l-4 border-green-500">
+      <p class="text-xs text-gray-600">Valor Total Stock</p>
+      <p id="statValor" class="text-2xl font-bold text-green-600">$0</p>
+    </div>
   </div>
 </div>
 
-<!-- STATS (NO CAMBIADO) -->
-<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 p-4">
-  <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
-    <p class="text-xs">Total</p>
-    <p id="statTotal" class="text-2xl font-bold">0</p>
+<!-- MODAL EDITAR -->
+<dialog id="modalEditar" class="p-6 rounded-lg w-full max-w-md">
+  <h2 class="font-bold text-xl mb-4 flex items-center gap-2">
+    <i class="bi bi-pencil-square"></i> Editar Producto
+  </h2>
+
+  <div class="space-y-3 mb-4">
+    <div>
+      <label class="block text-sm font-bold mb-1">Nombre</label>
+      <input id="editNombre" type="text" class="border-2 p-2 w-full rounded">
+    </div>
+
+    <div>
+      <label class="block text-sm font-bold mb-1">Stock (Entero)</label>
+      <input id="editStock" type="number" step="1" class="border-2 p-2 w-full rounded">
+    </div>
+
+    <div>
+      <label class="block text-sm font-bold mb-1">Costo (sin decimales)</label>
+      <div class="flex gap-2">
+        <input id="editCosto" type="number" step="1" placeholder="Ej: 100" class="border-2 p-2 flex-1 rounded">
+        <button id="btnCalcularCosto" class="bg-blue-500 text-white px-3 rounded hover:bg-blue-600 transition">
+          📊 Auto
+        </button>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-bold mb-1">Precio Venta (sin decimales)</label>
+      <input id="editPrecio" type="number" step="1" placeholder="Ej: 150" class="border-2 p-2 w-full rounded">
+    </div>
+
+    <div class="bg-blue-50 p-2 rounded text-sm">
+      <p class="text-gray-600">Ganancia por unidad: <span id="editGanancia" class="font-bold text-green-600">$0</span></p>
+      <p class="text-gray-600">Margen: <span id="editMargen" class="font-bold">0%</span></p>
+    </div>
   </div>
 
-  <div class="bg-red-50 p-3 rounded border-l-4 border-red-500">
-    <p class="text-xs">Bajo</p>
-    <p id="statBajo" class="text-2xl font-bold">0</p>
+  <div class="flex gap-2">
+    <button id="btnGuardarEdicion" class="bg-green-600 hover:bg-green-700 text-white flex-1 py-2 rounded font-bold transition">
+      💾 Guardar
+    </button>
+    <button id="btnCancelarEdicion" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded font-bold transition">
+      Cancelar
+    </button>
+    <button id="btnEliminarProducto" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-bold transition">
+      🗑️ Eliminar
+    </button>
+  </div>
+</dialog>
+
+<!-- MODAL NUEVO -->
+<dialog id="modalNuevo" class="p-6 rounded-lg w-full max-w-md">
+  <h2 class="font-bold text-xl mb-4 flex items-center gap-2">
+    <i class="bi bi-plus-circle"></i> Nuevo Producto
+  </h2>
+
+  <div class="space-y-3 mb-4">
+    <div>
+      <label class="block text-sm font-bold mb-1">Nombre *</label>
+      <input id="nuevoNombre" type="text" class="border-2 p-2 w-full rounded" placeholder="Ej: Huevo">
+    </div>
+
+    <div>
+      <label class="block text-sm font-bold mb-1">Stock (Entero)</label>
+      <input id="nuevoStock" type="number" step="1" value="0" class="border-2 p-2 w-full rounded">
+    </div>
+
+    <div>
+      <label class="block text-sm font-bold mb-1">Costo c/u (opcional)</label>
+      <input id="nuevoCosto" type="number" step="1" placeholder="Ej: 100" class="border-2 p-2 w-full rounded">
+    </div>
+
+    <div>
+      <label class="block text-sm font-bold mb-1">Precio Venta c/u *</label>
+      <input id="nuevoPrecio" type="number" step="1" placeholder="Ej: 150" class="border-2 p-2 w-full rounded">
+    </div>
+
+    <div>
+      <label class="block text-sm font-bold mb-1">Unidad</label>
+      <select id="nuevaUnidad" class="border-2 p-2 w-full rounded">
+        <option value="pieza">Pieza</option>
+        <option value="kg">Kilogramo</option>
+        <option value="g">Gramo</option>
+        <option value="l">Litro</option>
+        <option value="metro">Metro</option>
+      </select>
+    </div>
   </div>
 
-  <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500">
-    <p class="text-xs">Sin Costo</p>
-    <p id="statSinCosto" class="text-2xl font-bold">0</p>
+  <div class="flex gap-2">
+    <button id="btnGuardarNuevo" class="bg-green-600 hover:bg-green-700 text-white flex-1 py-2 rounded font-bold transition">
+      ➕ Crear
+    </button>
+    <button id="btnCancelarNuevo" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded font-bold transition">
+      Cancelar
+    </button>
   </div>
-
-  <div class="bg-green-50 p-3 rounded border-l-4 border-green-500">
-    <p class="text-xs">Valor</p>
-    <p id="statValor" class="text-2xl font-bold">$0</p>
-  </div>
-</div>
-
-<!-- MODALES (CRÍTICO PARA JS) -->
-<dialog id="modalEditar" class="p-6 rounded-lg w-full max-w-md"></dialog>
-<dialog id="modalNuevo" class="p-6 rounded-lg w-full max-w-md"></dialog>
+</dialog>
 
 <script src="inventario.js"></script>
 
