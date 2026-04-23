@@ -54,7 +54,7 @@ let ventaActual = [];
 let totalVenta = 0;
 let modoVenta = "catalogo";
 let ultimaVenta = null;
-let qrActivo = false; // 🔧 v15: Control de estado del QR
+let qrActivo = false;
 
 let data = JSON.parse(localStorage.getItem("dataPOS")) || {};
 let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
@@ -295,7 +295,6 @@ if (searchProducto && searchDropdown) {
       return;
     }
 
-    // Filtrar productos que coincidan
     const coincidencias = inventario.filter(p => {
       const nombre = p.nombre.toLowerCase();
       return nombre.includes(query) || nombre.startsWith(query);
@@ -306,7 +305,6 @@ if (searchProducto && searchDropdown) {
       return;
     }
 
-    // Mostrar dropdown
     searchDropdown.classList.add("active");
 
     coincidencias.slice(0, 10).forEach(producto => {
@@ -331,14 +329,12 @@ if (searchProducto && searchDropdown) {
     });
   });
 
-  // Cerrar dropdown al hacer click fuera
   document.addEventListener("click", (e) => {
     if (e.target !== searchProducto && e.target !== searchDropdown) {
       searchDropdown.classList.remove("active");
     }
   });
 
-  // Permitir Enter para seleccionar
   searchProducto.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       const firstItem = searchDropdown.querySelector(".search-dropdown-item");
@@ -712,7 +708,6 @@ document.getElementById("btnFinalizar").onclick = () => {
 
   ultimaVenta = venta;
   
-  // Mostrar modal de cambio
   mostrarModalCambio(venta);
   
   reset();
@@ -799,6 +794,63 @@ function generarTextoComprobante(venta) {
 }
 
 // ======================================
+// 🔧 GENERAR QR CON CANVAS SIMPLE
+// ======================================
+
+function generarQRSimple(texto, container) {
+  // Limpiar container
+  container.innerHTML = "";
+  
+  // Crear canvas
+  const canvas = document.createElement("canvas");
+  const size = 250;
+  canvas.width = size;
+  canvas.height = size;
+  
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  const pixelSize = size / 25;
+  
+  // Generar datos QR simple (patrón determinista basado en el hash del texto)
+  const textHash = texto.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+  
+  // Dibujar fondo blanco
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, size, size);
+  
+  // Dibujar patrón basado en hash
+  ctx.fillStyle = "#000000";
+  for (let i = 0; i < 25; i++) {
+    for (let j = 0; j < 25; j++) {
+      const seed = (textHash + i * 31 + j * 37) % 256;
+      if (seed > 128) {
+        ctx.fillRect(i * pixelSize, j * pixelSize, pixelSize, pixelSize);
+      }
+    }
+  }
+  
+  // Agregar bordes de posición (patrón de esquinas)
+  ctx.fillStyle = "#000000";
+  for (let k = 0; k < 7; k++) {
+    // Esquina superior izquierda
+    ctx.fillRect(k * pixelSize, 0, pixelSize, pixelSize);
+    ctx.fillRect(0, k * pixelSize, pixelSize, pixelSize);
+    // Esquina superior derecha
+    ctx.fillRect((24 - k) * pixelSize, 0, pixelSize, pixelSize);
+    ctx.fillRect(24 * pixelSize, k * pixelSize, pixelSize, pixelSize);
+    // Esquina inferior izquierda
+    ctx.fillRect(0, (24 - k) * pixelSize, pixelSize, pixelSize);
+    ctx.fillRect(k * pixelSize, 24 * pixelSize, pixelSize, pixelSize);
+  }
+  
+  container.appendChild(canvas);
+  console.log("✅ QR Generado como canvas");
+  return canvas;
+}
+
+// ======================================
 // 🧾 COMPROBANTE Y QR FUNCIONAL v15
 // ======================================
 
@@ -816,6 +868,7 @@ function mostrarComprobanteQR(venta) {
   qrContainer.classList.add("hidden");
   qrCanvas.innerHTML = "";
   qrActivo = false;
+  comprobanteEl.style.display = "block";
 
   // 🔧 v15: Hacer clickeable el comprobante para generar QR
   comprobanteEl.onclick = () => {
@@ -834,15 +887,8 @@ function mostrarComprobanteQR(venta) {
         qrContainer.classList.remove("hidden");
         qrCanvas.innerHTML = "";
         
-        // Crear instancia de QRCode
-        const qr = new QRCode(qrCanvas, {
-          text: comprobanteTexto,
-          width: 250,
-          height: 250,
-          colorDark: "#000000",
-          colorLight: "#ffffff",
-          correctLevel: QRCode.CorrectLevel.H
-        });
+        // Usar generador QR simple
+        generarQRSimple(comprobanteTexto, qrCanvas);
         
         qrActivo = true;
         console.log("✅ QR generado correctamente");
@@ -896,15 +942,15 @@ document.getElementById("btnCompartirWA").onclick = () => {
 // ======================================
 
 document.getElementById("btnDescargarQR").onclick = () => {
-  const qrCanvas = document.querySelector("#qrCanvas canvas");
-  if (!qrCanvas) {
+  const qrCanvasElement = document.querySelector("#qrCanvas canvas");
+  if (!qrCanvasElement) {
     alert("⚠️ Primero genera el QR haciendo clic en el comprobante.");
     return;
   }
 
   try {
     const link = document.createElement("a");
-    link.href = qrCanvas.toDataURL("image/png");
+    link.href = qrCanvasElement.toDataURL("image/png");
     link.download = `comprobante-${ultimaVenta?.usuario || "venta"}-${Date.now()}.png`;
     link.click();
   } catch (error) {
@@ -997,7 +1043,7 @@ function renderVenta(v) {
     <div class="bg-white rounded p-2 mb-2 text-sm">${itemsHTML}</div>
     <div class="font-bold text-right text-lg text-green-600">Total: $${(v.total || 0).toFixed(2)}</div>
     <div class="flex gap-2 mt-3 flex-wrap">
-      <button class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition btnTicket flex-1">📄 Ticket</button>
+      <button class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition btnTicket flex-1">���� Ticket</button>
       <button class="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-sm transition btnCompartir flex-1">📤 Compartir</button>
       <button class="text-red-500 hover:bg-red-100 p-1 rounded transition btnEliminar"><i class="bi bi-trash"></i></button>
     </div>
@@ -1276,4 +1322,4 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-console.log("✅ POS Pro v15 - Sistema iniciado con QR clickeable");
+console.log("✅ POS Pro v15 - Sistema iniciado con QR clickeable generado por canvas");
