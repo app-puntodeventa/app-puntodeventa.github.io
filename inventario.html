@@ -15,24 +15,24 @@
   }
 
   /* ==============================
-     🔥 RESPONSIVE TABLE (SIN JS)
+     🔥 TABLE RESPONSIVE FIX (REAL)
      ============================== */
 
   .table-responsive {
+    width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    width: 100%;
   }
 
   table {
-    width: 100%;
     border-collapse: collapse;
+    width: 100%;
   }
 
-  /* 🔥 clave para activar scroll horizontal en móvil */
+  /* 🔥 CLAVE: fuerza overflow en móvil */
   @media (max-width: 768px) {
     table {
-      min-width: 750px;
+      min-width: 800px;
     }
 
     th, td {
@@ -49,7 +49,7 @@
   }
 
   /* ==============================
-     TU CSS ORIGINAL (INTACTO)
+     TU CSS ORIGINAL (SIN CAMBIOS)
      ============================== */
 
   .edit-mode input, .edit-mode select {
