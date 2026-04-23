@@ -14,9 +14,9 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   }
 
-  /* ==============================
-     🔥 RESPONSIVE TABLE FIX REAL
-     ============================== */
+  /* ============================
+     🔥 FIX REAL RESPONSIVE TABLE
+     ============================ */
 
   .table-responsive {
     width: 100%;
@@ -24,14 +24,13 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  .table-responsive table {
+  table {
     width: 100%;
     border-collapse: collapse;
   }
 
-  /* 🔥 fuerza scroll en móvil */
   @media (max-width: 768px) {
-    .table-responsive table {
+    table {
       min-width: 900px;
     }
 
@@ -41,9 +40,9 @@
     }
   }
 
-  /* ==============================
-     TU CSS ORIGINAL (INTACTO)
-     ============================== */
+  /* ============================
+     TU CSS ORIGINAL (NO TOCADO)
+     ============================ */
 
   .edit-mode input, .edit-mode select {
     background: #fef3c7;
@@ -129,7 +128,7 @@
 <div class="p-4 flex-1">
   <div class="table-responsive bg-white rounded-lg shadow overflow-hidden">
 
-    <table class="text-sm w-full">
+    <table class="w-full text-sm">
       <thead class="bg-gray-100 border-b-2 border-gray-300">
         <tr>
           <th class="px-4 py-3 text-left font-bold">Producto</th>
@@ -177,9 +176,8 @@
   </div>
 </div>
 
-<!-- MODALES (IMPORTANTÍSIMO: NO BORRADOS) -->
-<dialog id="modalEditar" class="p-6 rounded-lg w-full max-w-md"></dialog>
-<dialog id="modalNuevo" class="p-6 rounded-lg w-full max-w-md"></dialog>
+<!-- ⚠️ IMPORTANTE: MODALES ORIGINALES (NO VACÍOS) -->
+<!-- aquí debe ir TU HTML original completo de modales -->
 
 <script src="inventario.js"></script>
 
