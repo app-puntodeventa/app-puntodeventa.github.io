@@ -111,14 +111,6 @@ function actualizarProductoInventario(nombre, precioVenta, unidad = "pieza", can
     if (cantidad > 0) {
       producto.stock = (producto.stock || 0) + cantidad;
     }
-    // 🔧 v14: Validar cambios de precio
-    if (producto.precioVenta && producto.precioVenta !== Number(precioVenta)) {
-      const precioActual = producto.precioVenta;
-      const diferencia = Math.abs(precioActual - Number(precioVenta));
-      if (diferencia > 0) {
-        console.warn(`⚠️ Precio diferente para "${nombre}": $${precioActual} → $${precioVenta}`);
-      }
-    }
   } else {
     producto = {
       id: Date.now(),
@@ -617,39 +609,23 @@ if (btnAgregarBeta) {
     }
 
     resultado.productos.forEach(p => {
-      // 🔧 v14: Solo agregar al inventario si hay nombre de producto
-      if (p.producto) {
-        const productoObj = actualizarProductoInventario(p.producto, p.precioPorUnidad, p.unidad || "pieza", 0);
-        let ganancia = 0;
-        if (productoObj.costo && productoObj.costo > 0) {
-          ganancia = p.precioTotal - (productoObj.costo * p.cantidad);
-        }
-
-        ventaActual.push({
-          id: Date.now() + Math.random(),
-          usuario: usuarioActual,
-          texto: p.descripcion,
-          cantidad: p.cantidad,
-          unidad: p.unidad || "pieza",
-          precio: p.precioPorUnidad,
-          subtotal: p.precioTotal,
-          costo: productoObj.costo || 0,
-          ganancia
-        });
-      } else {
-        // Venta rápida sin nombre de producto (no guardar en inventario)
-        ventaActual.push({
-          id: Date.now() + Math.random(),
-          usuario: usuarioActual,
-          texto: p.descripcion,
-          cantidad: p.cantidad,
-          unidad: p.unidad || "pieza",
-          precio: p.precioPorUnidad,
-          subtotal: p.precioTotal,
-          costo: 0,
-          ganancia: p.precioTotal
-        });
+      const productoObj = actualizarProductoInventario(p.producto, p.precioPorUnidad, p.unidad || "pieza", 0);
+      let ganancia = 0;
+      if (productoObj.costo && productoObj.costo > 0) {
+        ganancia = p.precioTotal - (productoObj.costo * p.cantidad);
       }
+
+      ventaActual.push({
+        id: Date.now() + Math.random(),
+        usuario: usuarioActual,
+        texto: p.descripcion,
+        cantidad: p.cantidad,
+        unidad: p.unidad || "pieza",
+        precio: p.precioPorUnidad,
+        subtotal: p.precioTotal,
+        costo: productoObj.costo || 0,
+        ganancia
+      });
 
       totalVenta += p.precioTotal;
     });
@@ -802,8 +778,29 @@ document.getElementById("btnCompartirQR").onclick = () => {
 };
 
 // ======================================
+// 🧾 GENERAR TEXTO COMPROBANTE
+// ======================================
+
+function generarTextoComprobante(venta) {
+  let comprobanteTexto = "";
+  
+  venta.items.forEach(item => {
+    const partes = item.texto.split(" ");
+    const cantidad = partes[0] || item.cantidad;
+    const descripcion = partes.slice(1).join(" ") || item.texto;
+    
+    comprobanteTexto += `${cantidad} ${descripcion.toUpperCase()} = $${item.subtotal.toFixed(2)}\n`;
+  });
+  
+  comprobanteTexto += `TOTAL: $${venta.total.toFixed(2)}`;
+  
+  return comprobanteTexto;
+}
+
+// ======================================
 // 🧾 COMPROBANTE Y QR FUNCIONAL v14
 // ======================================
+
 function mostrarComprobanteQR(venta) {
   const comprobanteTexto = generarTextoComprobante(venta);
   document.getElementById("comprobanteTexto").textContent = comprobanteTexto;
@@ -811,44 +808,40 @@ function mostrarComprobanteQR(venta) {
   const qrContainer = document.getElementById("qrCode");
   qrContainer.innerHTML = "";
   
-  // 🔧 v14: Usar html5-qrcode con toDataURL
   try {
-    if (typeof Html5Qrcode !== 'undefined') {
-      Html5Qrcode.scanFile(comprobanteTexto, true).then(decodedText => {
-        // Generar QR desde el texto
-        const canvas = document.createElement("canvas");
-        const qr = new Html5Qrcode("qrCode");
-        
-        // Alternativa: usar canvas directo
-        const context = canvas.getContext("2d");
-        const size = 250;
-        canvas.width = size;
-        canvas.height = size;
-        
-        // Dibujar patrón simple
-        for (let i = 0; i < size; i++) {
-          for (let j = 0; j < size; j++) {
-            const value = (comprobanteTexto.charCodeAt((i + j) % comprobanteTexto.length) ^ (i * j)) % 2;
-            context.fillStyle = value ? "#000" : "#fff";
-            context.fillRect(i, j, 1, 1);
-          }
-        }
-        
-        qrContainer.appendChild(canvas);
-      }).catch(err => {
-        console.log("Usando fallback...");
-        throw err;
-      });
-    } else {
-      throw new Error("Html5Qrcode no disponible");
-    }
+    // Crear instancia de QRCode
+    const qr = new QRCode(qrContainer, {
+      text: comprobanteTexto,
+      width: 250,
+      height: 250,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.H
+    });
+    
+    console.log("✅ QR generado correctamente");
+    
   } catch (error) {
-    console.warn("Fallback a SVG simple:", error);
+    console.error("❌ Error al generar QR:", error);
+    
+    // FALLBACK: Mostrar patrón visual simple
+    qrContainer.style.width = "250px";
+    qrContainer.style.height = "250px";
+    qrContainer.style.background = "#f0f0f0";
+    qrContainer.style.display = "flex";
+    qrContainer.style.alignItems = "center";
+    qrContainer.style.justifyContent = "center";
+    qrContainer.style.borderRadius = "8px";
+    qrContainer.style.flexDirection = "column";
+    qrContainer.style.padding = "20px";
+    qrContainer.style.boxSizing = "border-box";
     qrContainer.innerHTML = `
-      <svg viewBox="0 0 250 250" width="250" height="250" xmlns="http://www.w3.org/2000/svg">
-        <rect width="250" height="250" fill="white"/>
-        <text x="125" y="125" text-anchor="middle" font-size="12" fill="black">QR: ${comprobanteTexto.substring(0, 20)}...</text>
-      </svg>
+      <div style="text-align: center;">
+        <p style="color: #333; font-weight: bold; margin: 0 0 10px 0; font-size: 14px;">📱 Comprobante QR</p>
+        <div style="background: white; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 11px; color: #666; max-height: 150px; overflow-y: auto; text-align: left;">
+          ${comprobanteTexto.replace(/\n/g, "<br>")}
+        </div>
+      </div>
     `;
   }
 
@@ -868,7 +861,7 @@ document.getElementById("btnCompartirWA").onclick = () => {
   mensaje += `👤 Usuario: ${venta.usuario}\n`;
   mensaje += `📅 Fecha: ${venta.fecha}\n\n`;
   mensaje += `*Detalles de la compra:*\n`;
-  mensaje += `━━━━━━━━━━━━━━━━━━\n`;
+  mensaje += `━━━━━━━━━━━━━━━━��━\n`;
   
   venta.items.forEach(item => {
     mensaje += `${item.texto}\n`;
@@ -1270,4 +1263,4 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-console.log("✅ POS Pro v14 - Sistema iniciado con QR mejorado y parser robusto");
+console.log("✅ POS Pro v14 - Sistema iniciado con QR funcional");
