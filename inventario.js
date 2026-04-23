@@ -7,12 +7,13 @@ let productoEditando = null;
 let filtroActual = "todos";
 
 const tablaInventario = document.getElementById("tablaInventario");
+const tarjetasInventario = document.getElementById("tarjetasInventario");
 const searchInventario = document.getElementById("searchInventario");
 const modalEditar = document.getElementById("modalEditar");
 const modalNuevo = document.getElementById("modalNuevo");
 
 // ======================================
-// 🎨 RENDER TABLA
+// 🎨 RENDER TABLA (Desktop)
 // ======================================
 
 function renderTabla(productos = inventario) {
@@ -64,6 +65,73 @@ function renderTabla(productos = inventario) {
 }
 
 // ======================================
+// 📱 RENDER TARJETAS (Mobile)
+// ======================================
+
+function renderTarjetas(productos = inventario) {
+  if (productos.length === 0) {
+    tarjetasInventario.innerHTML = `
+      <div class="text-center py-8 text-gray-400">
+        <i class="bi bi-inbox" style="font-size: 2rem;"></i><br>
+        <p>Sin productos</p>
+      </div>
+    `;
+    return;
+  }
+
+  tarjetasInventario.innerHTML = productos.map(p => {
+    const ganancia = (p.precioVenta || 0) - (p.costo || 0);
+    const margen = p.precioVenta > 0 ? Math.round((ganancia / p.precioVenta) * 100) : 0;
+    
+    let stockBadge = p.stock <= 5 
+      ? `<span class="badge badge-stock-bajo">⚠️ ${p.stock}</span>`
+      : `<span class="badge badge-stock-ok">✅ ${p.stock}</span>`;
+
+    let costoBadge = !p.costo || p.costo === 0
+      ? `Sin definir`
+      : `$${p.costo}`;
+
+    const ganananciaColor = ganancia > 0 ? "text-green-600" : ganancia === 0 ? "text-gray-600" : "text-red-600";
+
+    return `
+      <div class="producto-card">
+        <div class="producto-card-header">
+          <div class="producto-card-titulo">${p.nombre.toUpperCase()}</div>
+          <div>${stockBadge}</div>
+        </div>
+
+        <div class="producto-card-body">
+          <div class="producto-card-field">
+            <span class="producto-card-label">Costo</span>
+            <span class="producto-card-value">${costoBadge}</span>
+          </div>
+          <div class="producto-card-field">
+            <span class="producto-card-label">Venta</span>
+            <span class="producto-card-value">$${p.precioVenta || 0}</span>
+          </div>
+        </div>
+
+        <div class="producto-card-ganancia">
+          <strong>Ganancia/U:</strong> <span class="${ganananciaColor}">$${ganancia}</span> 
+          <span class="text-gray-600">(${margen}%)</span>
+        </div>
+
+        <div class="producto-card-acciones">
+          <button class="btn-editar-mobile" onclick="abrirEdicion('${p.id}')">
+            ✏️ Editar
+          </button>
+          <button class="btn-excel-mobile" onclick="exportarProductoExcel('${p.id}')">
+            📊 Excel
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  actualizarStats();
+}
+
+// ======================================
 // 📊 ACTUALIZAR STATS
 // ======================================
 
@@ -101,11 +169,12 @@ function filtrarInventario() {
 }
 
 // ======================================
-// 🔄 RENDER CON FILTROS
+// 🔄 RENDER CON FILTROS (Desktop + Mobile)
 // ======================================
 
 function renderConFiltros() {
   renderTabla(filtrarInventario());
+  renderTarjetas(filtrarInventario());
 }
 
 searchInventario.addEventListener("input", renderConFiltros);
@@ -257,10 +326,75 @@ document.getElementById("btnCancelarNuevo").onclick = () => {
 };
 
 // ======================================
+// 📊 EXPORTAR A EXCEL
+// ======================================
+
+function generarCSV() {
+  const productos = filtrarInventario();
+  
+  if (productos.length === 0) {
+    alert("❌ No hay productos para exportar");
+    return;
+  }
+
+  // Headers
+  let csv = "NOMBRE,STOCK,COSTO,PRECIO VENTA,GANANCIA/U,MARGEN %\n";
+
+  // Data
+  productos.forEach(p => {
+    const ganancia = (p.precioVenta || 0) - (p.costo || 0);
+    const margen = p.precioVenta > 0 ? Math.round((ganancia / p.precioVenta) * 100) : 0;
+    const costo = p.costo || "";
+
+    csv += `"${p.nombre.toUpperCase()}",${p.stock || 0},${costo},${p.precioVenta || 0},${ganancia},${margen}%\n`;
+  });
+
+  return csv;
+}
+
+function descargarCSV(contenido, nombreArchivo) {
+  const blob = new Blob([contenido], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  
+  if (navigator.msSaveBlob) {
+    // IE 10+
+    navigator.msSaveBlob(blob, nombreArchivo);
+  } else {
+    link.href = URL.createObjectURL(blob);
+    link.download = nombreArchivo;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+}
+
+function exportarProductoExcel(id) {
+  const p = inventario.find(x => x.id == id);
+  if (!p) return;
+
+  const ganancia = (p.precioVenta || 0) - (p.costo || 0);
+  const margen = p.precioVenta > 0 ? Math.round((ganancia / p.precioVenta) * 100) : 0;
+  const costo = p.costo || "Sin definir";
+
+  const csv = `NOMBRE,STOCK,COSTO,PRECIO VENTA,GANANCIA/U,MARGEN %\n"${p.nombre.toUpperCase()}",${p.stock || 0},${costo},${p.precioVenta || 0},${ganancia},${margen}%`;
+
+  descargarCSV(csv, `producto-${p.nombre}-${new Date().toISOString().split('T')[0]}.csv`);
+}
+
+document.getElementById("btnExportarExcel").onclick = () => {
+  const csv = generarCSV();
+  if (csv) {
+    descargarCSV(csv, `inventario-${new Date().toISOString().split('T')[0]}.csv`);
+  }
+};
+
+// ======================================
 // 🚀 INICIALIZAR
 // ======================================
 
 renderTabla();
+renderTarjetas();
 actualizarStats();
 
-console.log("✅ Inventario cargado");
+console.log("✅ Inventario cargado - Responsive + Excel activado");
