@@ -14,8 +14,21 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   }
 
+  /* ✅ MEJOR SCROLL EN MÓVILES */
   .table-responsive {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+  }
+
+  /* ✅ EVITA QUE LA TABLA SE APLASTE */
+  table {
+    min-width: 750px;
+  }
+
+  /* Evita cortes de texto en columnas */
+  th, td {
+    white-space: nowrap;
   }
 
   .edit-mode input, .edit-mode select {
@@ -96,18 +109,22 @@
 
 <!-- TABLA -->
 <div class="p-4 flex-1">
-  <div class="table-responsive bg-white rounded-lg shadow overflow-hidden">
+
+  <!-- ✅ IMPORTANTE: SOLO overflow-x-auto -->
+  <div class="bg-white rounded-lg shadow table-responsive">
+
     <table class="w-full text-sm">
       <thead class="bg-gray-100 border-b-2 border-gray-300">
         <tr>
-          <th class="px-4 py-3 text-left font-bold">Producto</th>
-          <th class="px-4 py-3 text-center font-bold">Stock</th>
-          <th class="px-4 py-3 text-right font-bold">Costo</th>
-          <th class="px-4 py-3 text-right font-bold">Precio Venta</th>
-          <th class="px-4 py-3 text-center font-bold">Ganancia/U</th>
-          <th class="px-4 py-3 text-center font-bold">Acciones</th>
+          <th class="px-4 py-3 text-left font-bold whitespace-nowrap">Producto</th>
+          <th class="px-4 py-3 text-center font-bold whitespace-nowrap">Stock</th>
+          <th class="px-4 py-3 text-right font-bold whitespace-nowrap">Costo</th>
+          <th class="px-4 py-3 text-right font-bold whitespace-nowrap">Precio Venta</th>
+          <th class="px-4 py-3 text-center font-bold whitespace-nowrap">Ganancia/U</th>
+          <th class="px-4 py-3 text-center font-bold whitespace-nowrap">Acciones</th>
         </tr>
       </thead>
+
       <tbody id="tablaInventario">
         <tr>
           <td colspan="6" class="text-center p-4 text-gray-400">
@@ -115,6 +132,7 @@
           </td>
         </tr>
       </tbody>
+
     </table>
   </div>
 
@@ -159,33 +177,25 @@
     <div>
       <label class="block text-sm font-bold mb-1">Costo (sin decimales)</label>
       <div class="flex gap-2">
-        <input id="editCosto" type="number" step="1" placeholder="Ej: 100" class="border-2 p-2 flex-1 rounded">
-        <button id="btnCalcularCosto" class="bg-blue-500 text-white px-3 rounded hover:bg-blue-600 transition">
+        <input id="editCosto" type="number" step="1" class="border-2 p-2 flex-1 rounded">
+        <button id="btnCalcularCosto" class="bg-blue-500 text-white px-3 rounded">
           📊 Auto
         </button>
       </div>
     </div>
 
     <div>
-      <label class="block text-sm font-bold mb-1">Precio Venta (sin decimales)</label>
-      <input id="editPrecio" type="number" step="1" placeholder="Ej: 150" class="border-2 p-2 w-full rounded">
-    </div>
-
-    <div class="bg-blue-50 p-2 rounded text-sm">
-      <p class="text-gray-600">Ganancia por unidad: <span id="editGanancia" class="font-bold text-green-600">$0</span></p>
-      <p class="text-gray-600">Margen: <span id="editMargen" class="font-bold">0%</span></p>
+      <label class="block text-sm font-bold mb-1">Precio Venta</label>
+      <input id="editPrecio" type="number" step="1" class="border-2 p-2 w-full rounded">
     </div>
   </div>
 
   <div class="flex gap-2">
-    <button id="btnGuardarEdicion" class="bg-green-600 hover:bg-green-700 text-white flex-1 py-2 rounded font-bold transition">
+    <button id="btnGuardarEdicion" class="bg-green-600 text-white flex-1 py-2 rounded font-bold">
       💾 Guardar
     </button>
-    <button id="btnCancelarEdicion" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded font-bold transition">
+    <button id="btnCancelarEdicion" class="bg-gray-400 text-white px-4 py-2 rounded">
       Cancelar
-    </button>
-    <button id="btnEliminarProducto" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-bold transition">
-      🗑️ Eliminar
     </button>
   </div>
 </dialog>
@@ -197,46 +207,15 @@
   </h2>
 
   <div class="space-y-3 mb-4">
-    <div>
-      <label class="block text-sm font-bold mb-1">Nombre *</label>
-      <input id="nuevoNombre" type="text" class="border-2 p-2 w-full rounded" placeholder="Ej: Huevo">
-    </div>
-
-    <div>
-      <label class="block text-sm font-bold mb-1">Stock (Entero)</label>
-      <input id="nuevoStock" type="number" step="1" value="0" class="border-2 p-2 w-full rounded">
-    </div>
-
-    <div>
-      <label class="block text-sm font-bold mb-1">Costo c/u (opcional)</label>
-      <input id="nuevoCosto" type="number" step="1" placeholder="Ej: 100" class="border-2 p-2 w-full rounded">
-    </div>
-
-    <div>
-      <label class="block text-sm font-bold mb-1">Precio Venta c/u *</label>
-      <input id="nuevoPrecio" type="number" step="1" placeholder="Ej: 150" class="border-2 p-2 w-full rounded">
-    </div>
-
-    <div>
-      <label class="block text-sm font-bold mb-1">Unidad</label>
-      <select id="nuevaUnidad" class="border-2 p-2 w-full rounded">
-        <option value="pieza">Pieza</option>
-        <option value="kg">Kilogramo</option>
-        <option value="g">Gramo</option>
-        <option value="l">Litro</option>
-        <option value="metro">Metro</option>
-      </select>
-    </div>
+    <input id="nuevoNombre" class="border-2 p-2 w-full rounded" placeholder="Nombre">
+    <input id="nuevoStock" type="number" class="border-2 p-2 w-full rounded" value="0">
+    <input id="nuevoCosto" type="number" class="border-2 p-2 w-full rounded" placeholder="Costo">
+    <input id="nuevoPrecio" type="number" class="border-2 p-2 w-full rounded" placeholder="Precio">
   </div>
 
-  <div class="flex gap-2">
-    <button id="btnGuardarNuevo" class="bg-green-600 hover:bg-green-700 text-white flex-1 py-2 rounded font-bold transition">
-      ➕ Crear
-    </button>
-    <button id="btnCancelarNuevo" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded font-bold transition">
-      Cancelar
-    </button>
-  </div>
+  <button id="btnGuardarNuevo" class="bg-green-600 text-white w-full py-2 rounded font-bold">
+    ➕ Crear
+  </button>
 </dialog>
 
 <script src="inventario.js"></script>
