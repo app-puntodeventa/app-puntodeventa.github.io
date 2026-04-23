@@ -15,7 +15,7 @@
   }
 
   /* ==============================
-     🔥 TABLE RESPONSIVE FIX (REAL)
+     🔥 RESPONSIVE TABLE FIX REAL
      ============================== */
 
   .table-responsive {
@@ -24,32 +24,25 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  table {
-    border-collapse: collapse;
+  .table-responsive table {
     width: 100%;
+    border-collapse: collapse;
   }
 
-  /* 🔥 CLAVE: fuerza overflow en móvil */
+  /* 🔥 fuerza scroll en móvil */
   @media (max-width: 768px) {
-    table {
-      min-width: 800px;
+    .table-responsive table {
+      min-width: 900px;
     }
 
     th, td {
       white-space: nowrap;
       font-size: 12px;
-      padding: 10px 8px;
-    }
-
-    thead {
-      position: sticky;
-      top: 0;
-      z-index: 5;
     }
   }
 
   /* ==============================
-     TU CSS ORIGINAL (SIN CAMBIOS)
+     TU CSS ORIGINAL (INTACTO)
      ============================== */
 
   .edit-mode input, .edit-mode select {
@@ -134,10 +127,9 @@
 
 <!-- TABLA -->
 <div class="p-4 flex-1">
-
   <div class="table-responsive bg-white rounded-lg shadow overflow-hidden">
 
-    <table class="w-full text-sm">
+    <table class="text-sm w-full">
       <thead class="bg-gray-100 border-b-2 border-gray-300">
         <tr>
           <th class="px-4 py-3 text-left font-bold">Producto</th>
@@ -185,9 +177,9 @@
   </div>
 </div>
 
-<!-- MODALES -->
-<dialog id="modalEditar"></dialog>
-<dialog id="modalNuevo"></dialog>
+<!-- MODALES (IMPORTANTÍSIMO: NO BORRADOS) -->
+<dialog id="modalEditar" class="p-6 rounded-lg w-full max-w-md"></dialog>
+<dialog id="modalNuevo" class="p-6 rounded-lg w-full max-w-md"></dialog>
 
 <script src="inventario.js"></script>
 
