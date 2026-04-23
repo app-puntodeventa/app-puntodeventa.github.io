@@ -4,185 +4,222 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Inventario Pro - POS</title>
+<title>POS Pro - Sistema de Ventas</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode.js/1.4.4/qrcode.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#111827">
 
 <style>
   * {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   }
 
-  /* ✅ SOLO SCROLL SEGURO (NO ROMPE JS) */
-  .table-wrapper {
+  /* ==============================
+     🔥 RESPONSIVE TABLE FIX (SIN JS)
+     ============================== */
+
+  table {
     width: 100%;
+    border-collapse: collapse;
+  }
+
+  /* Contenedor scroll automático si hay overflow */
+  .table-wrapper,
+  .table-responsive,
+  .overflow-auto {
+    max-width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
 
-  .edit-mode input, .edit-mode select {
-    background: #fef3c7;
-    border: 2px solid #f59e0b;
+  /* Evita que columnas se aplasten */
+  th, td {
+    white-space: nowrap;
   }
 
-  .edit-mode input:focus, .edit-mode select:focus {
+  /* Mejora visual en móvil */
+  @media (max-width: 768px) {
+    table {
+      min-width: 700px; /* clave para activar scroll horizontal */
+    }
+
+    th, td {
+      font-size: 12px;
+      padding: 8px;
+    }
+  }
+
+  /* ==============================
+     TU CSS ORIGINAL (NO TOCADO)
+     ============================== */
+
+  #licenseModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+
+  #licenseModal.active {
+    display: flex;
+  }
+
+  #licenseModalContent {
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  }
+
+  #loginScreen {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .login-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    padding: 2.5rem 1.5rem;
+    width: 100%;
+    max-width: 380px;
+  }
+
+  .login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .login-header i {
+    font-size: 3rem;
+    color: #667eea;
+    margin-bottom: 0.5rem;
+  }
+
+  .login-header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+  }
+
+  .login-header p {
+    color: #6b7280;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .pin-input-group {
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+
+  .pin-input {
+    width: 100%;
+    padding: 14px 44px 14px 14px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+
+  .pin-input:focus {
     outline: none;
-    border-color: #d97706;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
   }
 
-  .badge {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 0.75rem;
+  .pin-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 1.2rem;
+  }
+
+  .login-btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
     font-weight: 600;
   }
-
-  .badge-stock-bajo { background: #fee2e2; color: #b91c1c; }
-  .badge-stock-ok { background: #dcfce7; color: #166534; }
-  .badge-sin-costo { background: #fef3c7; color: #92400e; }
 </style>
-
 </head>
 
-<body class="bg-gray-50 min-h-screen flex flex-col">
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+<!-- MODAL LICENCIA -->
+<div id="licenseModal"></div>
+
+<!-- LOGIN -->
+<div id="loginScreen"></div>
 
 <!-- HEADER -->
-<header class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 shadow-lg sticky top-0 z-20">
+<header class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 shadow-lg">
   <div class="flex justify-between items-center">
     <div class="font-bold text-lg flex items-center gap-2">
-      <i class="bi bi-box2"></i> Inventario
+      <i class="bi bi-cash-register"></i> POS Pro
     </div>
 
-    <a href="index.html" class="bg-white text-blue-600 px-4 py-2 rounded font-bold">
-      ← Volver
-    </a>
+    <div id="userLabel">Sin sesión</div>
+
+    <button id="btnLogout" class="bg-red-500 px-3 py-1 rounded text-sm font-bold">
+      Salir
+    </button>
   </div>
 </header>
 
-<!-- BÚSQUEDA Y FILTROS -->
-<div class="bg-white shadow p-4 border-b border-gray-200">
-
-  <div class="flex gap-2 flex-wrap mb-3">
-    <input id="searchInventario"
-      type="text"
-      placeholder="🔍 Buscar producto..."
-      class="flex-1 min-w-60 border-2 p-2 rounded font-bold">
-
-    <button id="btnNuevoProducto"
-      class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-bold flex items-center gap-1">
-      <i class="bi bi-plus-circle"></i> Nuevo
-    </button>
-  </div>
-
-  <div class="flex gap-2 flex-wrap text-sm">
-    <button id="filterTodos" class="px-3 py-1 bg-blue-100 text-blue-700 rounded font-bold">
-      Todos (0)
-    </button>
-
-    <button id="filterBajoStock" class="px-3 py-1 bg-red-100 text-red-700 rounded">
-      Bajo Stock
-    </button>
-
-    <button id="filterSinCosto" class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded">
-      Sin Costo
-    </button>
-  </div>
-
-</div>
-
-<!-- TABLA -->
-<div class="p-4 flex-1">
-
-  <!-- ✅ WRAPPER SEGURO PARA MÓVIL -->
-  <div class="table-wrapper bg-white rounded-lg shadow">
-
-    <table class="w-full text-sm">
-      <thead class="bg-gray-100 border-b-2 border-gray-300">
-        <tr>
-          <th class="px-4 py-3 text-left font-bold whitespace-nowrap">Producto</th>
-          <th class="px-4 py-3 text-center font-bold whitespace-nowrap">Stock</th>
-          <th class="px-4 py-3 text-right font-bold whitespace-nowrap">Costo</th>
-          <th class="px-4 py-3 text-right font-bold whitespace-nowrap">Precio Venta</th>
-          <th class="px-4 py-3 text-center font-bold whitespace-nowrap">Ganancia/U</th>
-          <th class="px-4 py-3 text-center font-bold whitespace-nowrap">Acciones</th>
-        </tr>
-      </thead>
-
-      <!-- ⚠️ ESTE ID ES CRÍTICO PARA TU JS -->
-      <tbody id="tablaInventario">
-        <tr>
-          <td colspan="6" class="text-center p-4 text-gray-400">
-            Cargando...
-          </td>
-        </tr>
-      </tbody>
-
-    </table>
-
-  </div>
-</div>
-
-<!-- STATS -->
-<div class="grid grid-cols-2 md:grid-cols-4 gap-3 p-4">
-  <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
-    <p class="text-xs text-gray-600">Total Productos</p>
-    <p id="statTotal" class="text-2xl font-bold">0</p>
-  </div>
-
-  <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500">
-    <p class="text-xs text-gray-600">Bajo Stock</p>
-    <p id="statBajo" class="text-2xl font-bold text-red-600">0</p>
-  </div>
-
-  <div class="bg-purple-50 p-3 rounded border-l-4 border-purple-500">
-    <p class="text-xs text-gray-600">Sin Costo</p>
-    <p id="statSinCosto" class="text-2xl font-bold text-yellow-600">0</p>
-  </div>
-
-  <div class="bg-green-50 p-3 rounded border-l-4 border-green-500">
-    <p class="text-xs text-gray-600">Valor Total</p>
-    <p id="statValor" class="text-2xl font-bold text-green-600">$0</p>
-  </div>
-</div>
-
-<!-- MODAL EDITAR -->
-<dialog id="modalEditar" class="p-6 rounded-lg w-full max-w-md">
-  <h2 class="font-bold text-xl mb-4">Editar Producto</h2>
-
-  <input id="editNombre" class="border-2 p-2 w-full mb-2 rounded">
-  <input id="editStock" type="number" class="border-2 p-2 w-full mb-2 rounded">
-  <input id="editCosto" type="number" class="border-2 p-2 w-full mb-2 rounded">
-  <input id="editPrecio" type="number" class="border-2 p-2 w-full mb-4 rounded">
-
-  <div class="flex gap-2">
-    <button id="btnGuardarEdicion" class="bg-green-600 text-white flex-1 py-2 rounded font-bold">
-      Guardar
-    </button>
-
-    <button id="btnCancelarEdicion" class="bg-gray-400 text-white px-4 py-2 rounded">
-      Cancelar
-    </button>
-  </div>
-</dialog>
-
-<!-- MODAL NUEVO -->
-<dialog id="modalNuevo" class="p-6 rounded-lg w-full max-w-md">
-  <h2 class="font-bold text-xl mb-4">Nuevo Producto</h2>
-
-  <input id="nuevoNombre" class="border-2 p-2 w-full mb-2 rounded">
-  <input id="nuevoStock" type="number" class="border-2 p-2 w-full mb-2 rounded">
-  <input id="nuevoCosto" type="number" class="border-2 p-2 w-full mb-2 rounded">
-  <input id="nuevoPrecio" type="number" class="border-2 p-2 w-full mb-4 rounded">
-
-  <button id="btnGuardarNuevo" class="bg-green-600 text-white w-full py-2 rounded font-bold">
-    Crear
+<!-- BOTONES -->
+<div class="bg-white p-3 shadow-md flex gap-2 flex-wrap">
+  <button id="btnNuevaVenta" class="bg-green-600 text-white px-4 py-2 rounded font-bold">
+    Nueva Venta
   </button>
-</dialog>
 
-<!-- TU JS ORIGINAL (NO MODIFICADO) -->
-<script src="inventario.js"></script>
+  <a href="inventario.html" class="bg-blue-600 text-white px-4 py-2 rounded font-bold">
+    Inventario
+  </a>
+</div>
+
+<!-- LISTA -->
+<div id="listaVentas" class="p-4"></div>
+
+<!-- FOOTER -->
+<div class="bg-white p-4 shadow-lg border-t">
+  <p>Total del día: <span id="totalDia">$0</span></p>
+</div>
+
+<!-- MODALES Y JS -->
+<dialog id="modal"></dialog>
+<dialog id="modalCambio"></dialog>
+<dialog id="modalComprobante"></dialog>
+
+<script src="parser14.js"></script>
+<script src="app14.js"></script>
 
 </body>
 </html>
