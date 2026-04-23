@@ -1264,3 +1264,18 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 console.log("✅ POS Pro v14 - Sistema iniciado con QR funcional");
+
+
+
+// ======================================
+// 🔓 LOGOUT
+// ======================================
+
+document.getElementById("btnLogout").onclick = () => {
+  if (confirm("¿Cerrar sesión?")) {
+    localStorage.removeItem("usuarioActivo");
+    usuarioActual = null;
+    location.reload();
+  }
+};
+
