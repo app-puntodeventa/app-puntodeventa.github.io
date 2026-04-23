@@ -1,5 +1,5 @@
 // ======================================
-// 📦 INVENTARIO - JAVASCRIPT (FIXED SAFE)
+// 📦 INVENTARIO - JAVASCRIPT
 // ======================================
 
 let inventario = JSON.parse(localStorage.getItem("inventarioPOS")) || [];
@@ -31,8 +31,8 @@ function renderTabla(productos = inventario) {
   tablaInventario.innerHTML = productos.map(p => {
     const ganancia = (p.precioVenta || 0) - (p.costo || 0);
     const margen = p.precioVenta > 0 ? Math.round((ganancia / p.precioVenta) * 100) : 0;
-
-    let stockBadge = p.stock <= 5
+    
+    let stockBadge = p.stock <= 5 
       ? `<span class="badge badge-stock-bajo">⚠️ ${p.stock}</span>`
       : `<span class="badge badge-stock-ok">✅ ${p.stock}</span>`;
 
@@ -40,7 +40,7 @@ function renderTabla(productos = inventario) {
       ? `<span class="badge badge-sin-costo">Sin definir</span>`
       : `$${p.costo}`;
 
-    const gananciaColor = ganancia > 0 ? "text-green-600" : ganancia === 0 ? "text-gray-600" : "text-red-600";
+    const ganananciaColor = ganancia > 0 ? "text-green-600" : ganancia === 0 ? "text-gray-600" : "text-red-600";
 
     return `
       <tr class="border-b hover:bg-gray-50 transition">
@@ -48,12 +48,11 @@ function renderTabla(productos = inventario) {
         <td class="px-4 py-3 text-center">${stockBadge}</td>
         <td class="px-4 py-3 text-right">${costoBadge}</td>
         <td class="px-4 py-3 text-right font-bold">$${p.precioVenta || 0}</td>
-        <td class="px-4 py-3 text-center ${gananciaColor} font-bold">
+        <td class="px-4 py-3 text-center ${ganananciaColor} font-bold">
           $${ganancia} <span class="text-xs">(${margen}%)</span>
         </td>
         <td class="px-4 py-3 text-center">
-          <button class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition"
-            onclick="abrirEdicion('${p.id}')">
+          <button class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition" onclick="abrirEdicion('${p.id}')">
             ✏️ Editar
           </button>
         </td>
@@ -65,10 +64,11 @@ function renderTabla(productos = inventario) {
 }
 
 // ======================================
-// 📊 STATS
+// 📊 ACTUALIZAR STATS
 // ======================================
 
 function actualizarStats() {
+  const filtrados = filtrarInventario();
   const bajosStock = inventario.filter(p => p.stock <= 5).length;
   const sinCosto = inventario.filter(p => !p.costo || p.costo === 0).length;
   const valorTotal = inventario.reduce((sum, p) => sum + ((p.costo || 0) * p.stock), 0);
@@ -80,7 +80,7 @@ function actualizarStats() {
 }
 
 // ======================================
-// 🔍 FILTROS
+// 🔍 FILTRAR
 // ======================================
 
 function filtrarInventario() {
@@ -92,7 +92,7 @@ function filtrarInventario() {
     productos = productos.filter(p => !p.costo || p.costo === 0);
   }
 
-  if (searchInventario?.value) {
+  if (searchInventario.value) {
     const query = searchInventario.value.toLowerCase();
     productos = productos.filter(p => p.nombre.toLowerCase().includes(query));
   }
@@ -100,30 +100,36 @@ function filtrarInventario() {
   return productos;
 }
 
+// ======================================
+// 🔄 RENDER CON FILTROS
+// ======================================
+
 function renderConFiltros() {
   renderTabla(filtrarInventario());
 }
 
-searchInventario?.addEventListener("input", renderConFiltros);
+searchInventario.addEventListener("input", renderConFiltros);
 
-// ======================================
-// 🔘 BOTONES FILTRO (SAFE)
-// ======================================
-
-document.getElementById("filterTodos")?.addEventListener("click", () => {
+document.getElementById("filterTodos").onclick = () => {
   filtroActual = "todos";
+  document.querySelectorAll("[id^=filter]").forEach(btn => btn.classList.remove("bg-blue-100", "text-blue-700"));
+  document.getElementById("filterTodos").classList.add("bg-blue-100", "text-blue-700");
   renderConFiltros();
-});
+};
 
-document.getElementById("filterBajoStock")?.addEventListener("click", () => {
+document.getElementById("filterBajoStock").onclick = () => {
   filtroActual = "bajo";
+  document.querySelectorAll("[id^=filter]").forEach(btn => btn.classList.remove("bg-blue-100", "text-blue-700"));
+  document.getElementById("filterBajoStock").classList.add("bg-blue-100", "text-blue-700");
   renderConFiltros();
-});
+};
 
-document.getElementById("filterSinCosto")?.addEventListener("click", () => {
+document.getElementById("filterSinCosto").onclick = () => {
   filtroActual = "sincosto";
+  document.querySelectorAll("[id^=filter]").forEach(btn => btn.classList.remove("bg-blue-100", "text-blue-700"));
+  document.getElementById("filterSinCosto").classList.add("bg-blue-100", "text-blue-700");
   renderConFiltros();
-});
+};
 
 // ======================================
 // ✏️ EDITAR PRODUCTO
@@ -145,9 +151,8 @@ function abrirEdicion(id) {
 }
 
 function actualizarCalculosEdicion() {
-  const costo = Number(document.getElementById("editCosto")?.value) || 0;
-  const precio = Number(document.getElementById("editPrecio")?.value) || 0;
-
+  const costo = Number(document.getElementById("editCosto").value) || 0;
+  const precio = Number(document.getElementById("editPrecio").value) || 0;
   const ganancia = precio - costo;
   const margen = precio > 0 ? Math.round((ganancia / precio) * 100) : 0;
 
@@ -155,20 +160,101 @@ function actualizarCalculosEdicion() {
   document.getElementById("editMargen").textContent = `${margen}%`;
 }
 
+document.getElementById("editCosto").addEventListener("input", actualizarCalculosEdicion);
+document.getElementById("editPrecio").addEventListener("input", actualizarCalculosEdicion);
+
+document.getElementById("btnCalcularCosto").onclick = () => {
+  const precio = Number(document.getElementById("editPrecio").value) || 0;
+  if (precio > 0) {
+    const costoSugerido = Math.round(precio * 0.6); // 40% margen
+    document.getElementById("editCosto").value = costoSugerido;
+    actualizarCalculosEdicion();
+  }
+};
+
+document.getElementById("btnGuardarEdicion").onclick = () => {
+  if (!productoEditando) return;
+
+  productoEditando.nombre = document.getElementById("editNombre").value.toLowerCase().trim() || productoEditando.nombre;
+  productoEditando.stock = Number(document.getElementById("editStock").value) || 0;
+  productoEditando.costo = Number(document.getElementById("editCosto").value) || null;
+  productoEditando.precioVenta = Number(document.getElementById("editPrecio").value) || 0;
+
+  localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
+  renderConFiltros();
+  modalEditar.close();
+  alert("✅ Producto actualizado");
+};
+
+document.getElementById("btnEliminarProducto").onclick = () => {
+  if (!productoEditando) return;
+  
+  if (confirm("⚠️ ¿Eliminar este producto?\n\nEsta acción no se puede deshacer.")) {
+    inventario = inventario.filter(p => p.id !== productoEditando.id);
+    localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
+    renderConFiltros();
+    modalEditar.close();
+    alert("✅ Producto eliminado");
+  }
+};
+
+document.getElementById("btnCancelarEdicion").onclick = () => {
+  modalEditar.close();
+};
+
 // ======================================
-// 🔥 FIX CLAVE (EVITA CRASH)
+// ➕ NUEVO PRODUCTO
 // ======================================
 
-const editCosto = document.getElementById("editCosto");
-const editPrecio = document.getElementById("editPrecio");
+document.getElementById("btnNuevoProducto").onclick = () => {
+  document.getElementById("nuevoNombre").value = "";
+  document.getElementById("nuevoStock").value = "0";
+  document.getElementById("nuevoCosto").value = "";
+  document.getElementById("nuevoPrecio").value = "";
+  document.getElementById("nuevaUnidad").value = "pieza";
+  modalNuevo.showModal();
+};
 
-if (editCosto) {
-  editCosto.addEventListener("input", actualizarCalculosEdicion);
-}
+document.getElementById("btnGuardarNuevo").onclick = () => {
+  const nombre = document.getElementById("nuevoNombre").value.toLowerCase().trim();
+  const precio = Number(document.getElementById("nuevoPrecio").value);
 
-if (editPrecio) {
-  editPrecio.addEventListener("input", actualizarCalculosEdicion);
-}
+  if (!nombre) {
+    alert("❌ Ingresa nombre del producto");
+    return;
+  }
+
+  if (precio <= 0) {
+    alert("❌ Ingresa precio válido");
+    return;
+  }
+
+  if (inventario.find(p => p.nombre === nombre)) {
+    alert("❌ Producto ya existe");
+    return;
+  }
+
+  const nuevoProducto = {
+    id: Date.now(),
+    nombre,
+    stock: Number(document.getElementById("nuevoStock").value) || 0,
+    costo: Number(document.getElementById("nuevoCosto").value) || null,
+    precioVenta: precio,
+    unidad: document.getElementById("nuevaUnidad").value,
+    alias: [nombre],
+    fechaCreacion: new Date().toLocaleString()
+  };
+
+  inventario.push(nuevoProducto);
+  localStorage.setItem("inventarioPOS", JSON.stringify(inventario));
+  renderConFiltros();
+  modalNuevo.close();
+  alert("✅ Producto creado");
+};
+
+document.getElementById("btnCancelarNuevo").onclick = () => {
+  modalNuevo.close();
+};
 
 // ======================================
 // 🚀 INICIALIZAR
@@ -177,4 +263,4 @@ if (editPrecio) {
 renderTabla();
 actualizarStats();
 
-console.log("✅ Inventario cargado correctamente (SAFE MODE)");
+console.log("✅ Inventario cargado");
