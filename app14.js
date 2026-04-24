@@ -1279,3 +1279,71 @@ document.getElementById("btnLogout").onclick = () => {
   }
 };
 
+
+
+
+
+// ======================================
+// 🔄 ACTUALIZACIÓN DE SERVICE WORKER
+// ======================================
+
+if ("serviceWorker" in navigator) {
+  // Registrar service worker mejorado
+  navigator.serviceWorker.register("./sw.js", { scope: "./" })
+    .then(registration => {
+      console.log("✅ Service Worker registrado:", registration);
+
+      // Escuchar actualizaciones
+      registration.addEventListener("updatefound", () => {
+        const newWorker = registration.installing;
+        
+        newWorker.addEventListener("statechange", () => {
+          if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+            console.log("🔄 Nueva versión disponible");
+            
+            // Mostrar notificación de actualización
+            const updateBar = document.createElement("div");
+            updateBar.className = "fixed top-0 left-0 right-0 bg-blue-600 text-white p-3 flex justify-between items-center z-9999";
+            updateBar.innerHTML = `
+              <span>📦 Nueva versión disponible</span>
+              <button onclick="window.location.reload()" class="bg-white text-blue-600 px-3 py-1 rounded font-bold">
+                Actualizar
+              </button>
+            `;
+            document.body.prepend(updateBar);
+            
+            // Auto-actualizar después de 5 segundos
+            setTimeout(() => {
+              newWorker.postMessage({ type: "SKIP_WAITING" });
+              window.location.reload();
+            }, 5000);
+          }
+        });
+      });
+    })
+    .catch(error => {
+      console.error("❌ Error registrando Service Worker:", error);
+    });
+
+  // Escuchar cambios de controlador
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    console.log("🔄 Service Worker actualizado");
+  });
+}
+
+// Notificar offline/online
+window.addEventListener("online", () => {
+  console.log("✅ Conexión restaurada");
+  const notification = document.querySelector(".offline-bar");
+  if (notification) notification.remove();
+});
+
+window.addEventListener("offline", () => {
+  console.log("⚠️ Sin conexión - Modo offline");
+  const offlineBar = document.createElement("div");
+  offlineBar.className = "offline-bar fixed top-0 left-0 right-0 bg-red-600 text-white p-3 text-center z-9999";
+  offlineBar.innerHTML = "📴 Sin conexión - Los datos se sincronizarán cuando te conectes";
+  document.body.prepend(offlineBar);
+});
+
+
