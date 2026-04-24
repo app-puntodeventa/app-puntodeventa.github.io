@@ -1,21 +1,94 @@
 {
-  "name": "POS Sistema de Ventas",
+  "name": "POS Pro - Sistema de Ventas",
   "short_name": "POS",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#ffffff",
-  "theme_color": "#111827",
-  "description": "Sistema de ventas offline tipo POS",
-  "icons": [
+  "theme_color": "#1e40af",
+  "description": "Sistema de ventas offline tipo POS - Funciona sin internet",
+  "categories": ["business", "productivity"],
+  "screenshots": [
     {
       "src": "icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "form_factor": "narrow"
     },
     {
       "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Nueva Venta",
+      "short_name": "Venta",
+      "description": "Crear una nueva venta rápidamente",
+      "url": "./index.html?mode=venta",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Inventario",
+      "short_name": "Inventario",
+      "description": "Gestionar inventario",
+      "url": "./inventario.html",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Ganancias",
+      "short_name": "Ganancias",
+      "description": "Ver análisis de ganancias",
+      "url": "./ganancias.html",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
